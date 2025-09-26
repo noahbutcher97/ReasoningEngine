@@ -1,0 +1,98 @@
+###############################################################################
+# Unreal Engine Plugin – .gitattributes
+# Goals:
+# - Normalize line endings for cross-platform teams
+# - Send binary UE assets & common DCC/media files to Git LFS
+# - Keep code & config as normal text (human-diffable)
+# - Mark hard-to-merge assets as lockable to avoid conflicts
+###############################################################################
+
+# ---------- Defaults ----------------------------------------------------------
+* text=auto
+
+# Treat these as text (normalized). Prefer LF to reduce CRLF churn across OSes.
+*.cpp         text eol=lf
+*.cc          text eol=lf
+*.c           text eol=lf
+*.h           text eol=lf
+*.hpp         text eol=lf
+*.inl         text eol=lf
+*.cs          text eol=lf
+*.csproj      text eol=lf
+*.usf         text eol=lf
+*.ush         text eol=lf
+*.hlsl        text eol=lf
+*.glsl        text eol=lf
+*.py          text eol=lf
+*.sh          text eol=lf
+*.txt         text eol=lf
+*.md          text eol=lf
+*.json        text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+*.xml         text eol=lf
+*.uplugin     text eol=lf
+*.ini         text eol=lf
+*.editorconfig text eol=lf
+*.gitattributes text eol=lf
+*.gitignore   text eol=lf
+
+# Windows shell scripts typically expect CRLF
+*.bat         text eol=crlf
+*.cmd         text eol=crlf
+*.ps1         text eol=crlf
+
+# ---------- Git LFS: Unreal binary assets ------------------------------------
+# UE plugin assets (binary, non-mergeable). Locking prevents parallel edits.
+*.uasset      filter=lfs diff=lfs merge=lfs -text lockable
+*.umap        filter=lfs diff=lfs merge=lfs -text lockable
+
+# Auxiliary asset chunks sometimes appear (usually in cooked content).
+*.uexp        filter=lfs diff=lfs merge=lfs -text
+*.ubulk       filter=lfs diff=lfs merge=lfs -text
+
+# ---------- Git LFS: DCC / media ---------------------------------------------
+*.fbx         filter=lfs diff=lfs merge=lfs -text lockable
+*.wav         filter=lfs diff=lfs merge=lfs -text lockable
+*.png         filter=lfs diff=lfs merge=lfs -text
+*.jpg         filter=lfs diff=lfs merge=lfs -text
+*.jpeg        filter=lfs diff=lfs merge=lfs -text
+*.tga         filter=lfs diff=lfs merge=lfs -text
+*.tif         filter=lfs diff=lfs merge=lfs -text
+*.tiff        filter=lfs diff=lfs merge=lfs -text
+*.exr         filter=lfs diff=lfs merge=lfs -text
+*.hdr         filter=lfs diff=lfs merge=lfs -text
+*.bmp         filter=lfs diff=lfs merge=lfs -text
+*.dds         filter=lfs diff=lfs merge=lfs -text
+*.psd         filter=lfs diff=lfs merge=lfs -text
+*.mov         filter=lfs diff=lfs merge=lfs -text
+*.mp4         filter=lfs diff=lfs merge=lfs -text
+*.avi         filter=lfs diff=lfs merge=lfs -text
+*.ogg         filter=lfs diff=lfs merge=lfs -text
+*.flac        filter=lfs diff=lfs merge=lfs -text
+*.mp3         filter=lfs diff=lfs merge=lfs -text
+
+# ---------- Safety: don’t diff big binaries ----------------------------------
+*.png  -diff
+*.jpg  -diff
+*.jpeg -diff
+*.tga  -diff
+*.tif  -diff
+*.tiff -diff
+*.exr  -diff
+*.hdr  -diff
+*.bmp  -diff
+*.dds  -diff
+*.psd  -diff
+*.fbx  -diff
+*.wav  -diff
+*.flac -diff
+*.mp3  -diff
+*.ogg  -diff
+*.mov  -diff
+*.mp4  -diff
+*.avi  -diff
+*.uasset -diff
+*.umap   -diff
+*.uexp   -diff
+*.ubulk  -diff
