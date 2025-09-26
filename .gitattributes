@@ -6,10 +6,8 @@
 # - Keep code & config as normal text (human-diffable)
 # - Mark hard-to-merge assets as lockable to avoid conflicts
 ###############################################################################
-
 # ---------- Defaults ----------------------------------------------------------
 * text=auto
-
 # Treat these as text (normalized). Prefer LF to reduce CRLF churn across OSes.
 *.cpp         text eol=lf
 *.cc          text eol=lf
@@ -36,21 +34,17 @@
 *.editorconfig text eol=lf
 *.gitattributes text eol=lf
 *.gitignore   text eol=lf
-
 # Windows shell scripts typically expect CRLF
 *.bat         text eol=crlf
 *.cmd         text eol=crlf
 *.ps1         text eol=crlf
-
 # ---------- Git LFS: Unreal binary assets ------------------------------------
 # UE plugin assets (binary, non-mergeable). Locking prevents parallel edits.
 *.uasset      filter=lfs diff=lfs merge=lfs -text lockable
 *.umap        filter=lfs diff=lfs merge=lfs -text lockable
-
 # Auxiliary asset chunks sometimes appear (usually in cooked content).
 *.uexp        filter=lfs diff=lfs merge=lfs -text
 *.ubulk       filter=lfs diff=lfs merge=lfs -text
-
 # ---------- Git LFS: DCC / media ---------------------------------------------
 *.fbx         filter=lfs diff=lfs merge=lfs -text lockable
 *.wav         filter=lfs diff=lfs merge=lfs -text lockable
@@ -71,7 +65,6 @@
 *.ogg         filter=lfs diff=lfs merge=lfs -text
 *.flac        filter=lfs diff=lfs merge=lfs -text
 *.mp3         filter=lfs diff=lfs merge=lfs -text
-
 # ---------- Safety: don’t diff big binaries ----------------------------------
 *.png  -diff
 *.jpg  -diff
