@@ -1,17 +1,17 @@
 #include "Semantic/REFuzzy.h"
-#include "Core/RENormalizer.h"
+#include "Infrastructure/RENormalizer.h"
 #include "ReasoningEngine.h"
 #include "Algo/LevenshteinDistance.h"  // Unreal's built-in for optimization
 
 // Static member initialization
-TMap<TCHAR, FVector2D> UREFuzzy::KeyboardLayout;
-bool UREFuzzy::bKeyboardInitialized = false;
-TMap<TCHAR, TCHAR> UREFuzzy::SoundexMap;
-bool UREFuzzy::bPhoneticInitialized = false;
+TMap<TCHAR, FVector2D> REFuzzy::KeyboardLayout;
+bool REFuzzy::bKeyboardInitialized = false;
+TMap<TCHAR, TCHAR> REFuzzy::SoundexMap;
+bool REFuzzy::bPhoneticInitialized = false;
 
 // ========== INITIALIZATION ==========
 
-void UREFuzzy::Initialize()
+void REFuzzy::Initialize()
 {
     InitializeKeyboardLayout();
     InitializePhoneticMaps();
@@ -19,7 +19,7 @@ void UREFuzzy::Initialize()
     UE_LOG(LogReasoningEngine, Log, TEXT("UREFuzzy initialized (Layer 0 - Always Available)"));
 }
 
-void UREFuzzy::InitializeKeyboardLayout()
+void REFuzzy::InitializeKeyboardLayout()
 {
     if (bKeyboardInitialized)
         return;
@@ -73,7 +73,7 @@ void UREFuzzy::InitializeKeyboardLayout()
     bKeyboardInitialized = true;
 }
 
-void UREFuzzy::InitializePhoneticMaps()
+void REFuzzy::InitializePhoneticMaps()
 {
     if (bPhoneticInitialized)
         return;
@@ -102,7 +102,7 @@ void UREFuzzy::InitializePhoneticMaps()
     bPhoneticInitialized = true;
 }
 
-FString UREFuzzy::PrepareString(const FString& Input, bool bNormalize)
+FString REFuzzy::PrepareString(const FString& Input, bool bNormalize)
 {
     if (bNormalize)
     {
@@ -113,7 +113,7 @@ FString UREFuzzy::PrepareString(const FString& Input, bool bNormalize)
 
 // ========== MAIN API ==========
 
-FREStringMatch UREFuzzy::CompareStrings(const FString& A, const FString& B, bool bNormalize)
+FREStringMatch REFuzzy::CompareStrings(const FString& A, const FString& B, bool bNormalize)
 {
     double StartTime = FPlatformTime::Seconds();
     
@@ -195,7 +195,7 @@ FREStringMatch UREFuzzy::CompareStrings(const FString& A, const FString& B, bool
     return Result;
 }
 
-FREStringMatch UREFuzzy::CompareStringsWithAlgo(
+FREStringMatch REFuzzy::CompareStringsWithAlgo(
     const FString& A,
     const FString& B,
     EREFuzzyAlgorithm Algorithm,
@@ -245,7 +245,7 @@ FREStringMatch UREFuzzy::CompareStringsWithAlgo(
 }
 
 
-float UREFuzzy::GetSimilarity(const FString& A, const FString& B, 
+float REFuzzy::GetSimilarity(const FString& A, const FString& B, 
                               EREFuzzyAlgorithm Algorithm, bool bNormalize)
 {
     FString PreparedA = PrepareString(A, bNormalize);
@@ -296,7 +296,7 @@ float UREFuzzy::GetSimilarity(const FString& A, const FString& B,
     }
 }
 
-int32 UREFuzzy::GetEditDistance(const FString& A, const FString& B, 
+int32 REFuzzy::GetEditDistance(const FString& A, const FString& B, 
                                  EREFuzzyAlgorithm Algorithm)
 {
     switch (Algorithm)
@@ -320,13 +320,13 @@ int32 UREFuzzy::GetEditDistance(const FString& A, const FString& B,
 
 // ========== EDIT DISTANCE ALGORITHMS ==========
 
-int32 UREFuzzy::CalculateLevenshtein(const FString& A, const FString& B)
+int32 REFuzzy::CalculateLevenshtein(const FString& A, const FString& B)
 {
     // Use Unreal's optimized implementation if available
     return Algo::LevenshteinDistance(A, B);
 }
 
-int32 UREFuzzy::CalculateDamerauLevenshtein(const FString& A, const FString& B)
+int32 REFuzzy::CalculateDamerauLevenshtein(const FString& A, const FString& B)
 {
     const int32 LenA = A.Len();
     const int32 LenB = B.Len();
@@ -397,7 +397,7 @@ int32 UREFuzzy::CalculateDamerauLevenshtein(const FString& A, const FString& B)
     return H[LenA + 1][LenB + 1];
 }
 
-int32 UREFuzzy::CalculateOptimalAlignment(const FString& A, const FString& B)
+int32 REFuzzy::CalculateOptimalAlignment(const FString& A, const FString& B)
 {
     const int32 LenA = A.Len();
     const int32 LenB = B.Len();
@@ -440,7 +440,7 @@ int32 UREFuzzy::CalculateOptimalAlignment(const FString& A, const FString& B)
     return D[LenA][LenB];
 }
 
-int32 UREFuzzy::CalculateHamming(const FString& A, const FString& B)
+int32 REFuzzy::CalculateHamming(const FString& A, const FString& B)
 {
     if (A.Len() != B.Len())
         return -1; // Undefined for different length strings
@@ -457,7 +457,7 @@ int32 UREFuzzy::CalculateHamming(const FString& A, const FString& B)
 
 // ========== SIMILARITY ALGORITHMS ==========
 
-float UREFuzzy::CalculateJaro(const FString& A, const FString& B)
+float REFuzzy::CalculateJaro(const FString& A, const FString& B)
 {
     if (A.IsEmpty() || B.IsEmpty()) return 0.0f;
     if (A.Equals(B)) return 1.0f;
@@ -518,7 +518,7 @@ float UREFuzzy::CalculateJaro(const FString& A, const FString& B)
     return Jaro;
 }
 
-float UREFuzzy::CalculateJaroWinkler(const FString& A, const FString& B, float PrefixScale)
+float REFuzzy::CalculateJaroWinkler(const FString& A, const FString& B, float PrefixScale)
 {
     float JaroSim = CalculateJaro(A, B);
     
@@ -541,7 +541,7 @@ float UREFuzzy::CalculateJaroWinkler(const FString& A, const FString& B, float P
 
 // ========== SUBSEQUENCE ALGORITHMS ==========
 
-int32 UREFuzzy::CalculateLCS(const FString& A, const FString& B)
+int32 REFuzzy::CalculateLCS(const FString& A, const FString& B)
 {
     int32 LenA = A.Len();
     int32 LenB = B.Len();
@@ -579,7 +579,7 @@ int32 UREFuzzy::CalculateLCS(const FString& A, const FString& B)
     return LCS[LenA][LenB];
 }
 
-int32 UREFuzzy::CalculateLCSS(const FString& A, const FString& B)
+int32 REFuzzy::CalculateLCSS(const FString& A, const FString& B)
 {
     int32 LenA = A.Len();
     int32 LenB = B.Len();
@@ -612,7 +612,7 @@ int32 UREFuzzy::CalculateLCSS(const FString& A, const FString& B)
 
 // ========== N-GRAM ALGORITHMS ==========
 
-FRENGramSet UREFuzzy::GenerateNGrams(const FString& Source, int32 N)
+FRENGramSet REFuzzy::GenerateNGrams(const FString& Source, int32 N)
 {
     FRENGramSet Result;
     Result.N = N;
@@ -636,7 +636,7 @@ FRENGramSet UREFuzzy::GenerateNGrams(const FString& Source, int32 N)
     return Result;
 }
 
-float UREFuzzy::CalculateDice(const FString& A, const FString& B, int32 N)
+float REFuzzy::CalculateDice(const FString& A, const FString& B, int32 N)
 {
     if (A.IsEmpty() || B.IsEmpty()) return 0.0f;
     if (A.Equals(B)) return 1.0f;
@@ -657,7 +657,7 @@ float UREFuzzy::CalculateDice(const FString& A, const FString& B, int32 N)
     return (2.0f * Intersection) / (GramsA.TotalGrams + GramsB.TotalGrams);
 }
 
-float UREFuzzy::CalculateJaccard(const FString& A, const FString& B, int32 N)
+float REFuzzy::CalculateJaccard(const FString& A, const FString& B, int32 N)
 {
     if (A.IsEmpty() || B.IsEmpty()) return 0.0f;
     if (A.Equals(B)) return 1.0f;
@@ -687,7 +687,7 @@ float UREFuzzy::CalculateJaccard(const FString& A, const FString& B, int32 N)
     return float(Intersection.Num()) / float(Union.Num());
 }
 
-float UREFuzzy::CalculateCosine(const FString& A, const FString& B, int32 N)
+float REFuzzy::CalculateCosine(const FString& A, const FString& B, int32 N)
 {
     if (A.IsEmpty() || B.IsEmpty()) return 0.0f;
     if (A.Equals(B)) return 1.0f;
@@ -722,7 +722,7 @@ float UREFuzzy::CalculateCosine(const FString& A, const FString& B, int32 N)
 
 // ========== PHONETIC ALGORITHMS ==========
 
-FString UREFuzzy::GenerateSoundex(const FString& Input)
+FString REFuzzy::GenerateSoundex(const FString& Input)
 {
     if (Input.IsEmpty()) return TEXT("0000");
     
@@ -760,7 +760,7 @@ FString UREFuzzy::GenerateSoundex(const FString& Input)
     return Result;
 }
 
-TArray<FString> UREFuzzy::GenerateMetaphone(const FString& Input, bool bDouble)
+TArray<FString> REFuzzy::GenerateMetaphone(const FString& Input, bool bDouble)
 {
     TArray<FString> Result;
     
@@ -975,7 +975,7 @@ TArray<FString> UREFuzzy::GenerateMetaphone(const FString& Input, bool bDouble)
     return Result;
 }
 
-bool UREFuzzy::ArePhoneticallyEqual(const FString& A, const FString& B)
+bool REFuzzy::ArePhoneticallyEqual(const FString& A, const FString& B)
 {
     FString SoundexA = GenerateSoundex(A);
     FString SoundexB = GenerateSoundex(B);
@@ -1000,7 +1000,7 @@ bool UREFuzzy::ArePhoneticallyEqual(const FString& A, const FString& B)
 
 // ========== TYPO/VISUAL ALGORITHMS ==========
 
-float UREFuzzy::CalculateKeyboardDistance(const FString& A, const FString& B)
+float REFuzzy::CalculateKeyboardDistance(const FString& A, const FString& B)
 {
     InitializeKeyboardLayout();
     
@@ -1055,7 +1055,7 @@ float UREFuzzy::CalculateKeyboardDistance(const FString& A, const FString& B)
     return 0.0f;
 }
 
-bool UREFuzzy::AreVisualConfusables(const FString& A, const FString& B)
+bool REFuzzy::AreVisualConfusables(const FString& A, const FString& B)
 {
     if (A.Equals(B))
         return true;
@@ -1107,7 +1107,7 @@ bool UREFuzzy::AreVisualConfusables(const FString& A, const FString& B)
 
 // ========== BATCH OPERATIONS ==========
 
-TArray<FString> UREFuzzy::FindBestMatches(const FString& Query,
+TArray<FString> REFuzzy::FindBestMatches(const FString& Query,
                                            const TArray<FString>& Candidates,
                                            int32 MaxResults,
                                            float MinSimilarity,

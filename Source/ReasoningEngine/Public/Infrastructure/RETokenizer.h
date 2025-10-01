@@ -1,142 +1,116 @@
+// Source/ReasoningEngine/Public/Infrastructure/RETokenizer.h
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/NoExportTypes.h"
-#include "Data/REInfrastructureTypes.h"
-#include "RETokenizer.generated.h"
+#include "Infrastructure/Data/REInfrastructureTypes.h"
 
 // Forward declarations
-class UREFuzzy;
-class URECache;
-
-
+class FREKnowledgeBase;  // From Symbolic layer
 
 /**
- * Advanced text tokenization component
- * Handles multiple naming conventions, variant generation, and vocabulary management
+ * Static utility class for text tokenization
+ * Second step in processing pipeline (after normalization)
+ * Pure tokenization functions - no state management
+ * 
+ * Design Philosophy:
+ * - Stateless tokenization algorithms
+ * - Reads vocabularies/stopwords from Symbolic Knowledge
+ * - Thread-safe by design
+ * - No UObject overhead
+ * 
+ * Dependencies:
+ * - RENormalizer for text preparation
+ * - REFuzzy for variant generation (typos)
+ * - Symbolic Knowledge for vocabularies/stopwords
  */
-UCLASS(BlueprintType)
-class REASONINGENGINE_API URETokenizer : public UObject
+class REASONINGENGINE_API RETokenizer
 {
-    GENERATED_BODY()
-    
-private:
-    // ========== DEPENDENCIES ==========
-    
-    UPROPERTY()
-    UREFuzzy* FuzzyMatcher;
-    
-    UPROPERTY()
-    URECache* CacheManager;
-    
-    // ========== CONFIGURATION ==========
-    
-    UPROPERTY()
-    FRETokenizerConfig DefaultConfig;
-    
-    // ========== VOCABULARIES ==========
-    
-    /** Domain-specific vocabularies by category */
-	/** Domain-specific vocabularies by category */
-	UPROPERTY()
-	TMap<FString, FREVocabularyCollection> Vocabularies;  // Changed from TArray to wrapper
-    
-    /** Canonical form mappings */
-    TMap<FString, FString> CanonicalForms;
-    
-    /** Stop words to filter */
-    TSet<FString> StopWords;
-    
-    // ========== CACHING ==========
-    
-    /** Token stream cache */
-    mutable TMap<uint32, FTokenStream> TokenStreamCache;
-    mutable FCriticalSection TokenStreamCacheMutex;
-    
-    /** Variant cache */
-    mutable TMap<FString, TArray<FString>> VariantCache;
-    mutable FCriticalSection VariantCacheMutex;
-    
-    // ========== STATISTICS ==========
-    
-    mutable FThreadSafeCounter TotalTokenizations;
-    mutable FThreadSafeCounter TotalVariantsGenerated;
-    
 public:
-    // ========== LIFECYCLE ==========
-    
-    void Initialize();
-    void Shutdown();
-    bool IsOperational() const { return true; }
-    
-    // ========== DEPENDENCIES ==========
-    
-    void SetFuzzyMatcher(UREFuzzy* InFuzzyMatcher);
-    void SetCacheManager(URECache* InCacheManager);
-    void ApplyConfiguration(class UTokenizerConfig* Config);
-    
-    // ========== TOKENIZATION ==========
+    // ========== PRIMARY TOKENIZATION ==========
     
     /**
      * Tokenize text with default configuration
-     * @param Text - Input text to tokenize
+     * Uses standard delimiters and rules
+     * @param Text - Input text (should be normalized)
      * @return Token stream
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer",
-              meta=(DisplayName="Tokenize"))
-    FRETokenStream Tokenize(const FString& Text);
+    static FRETokenStream Tokenize(const FString& Text);
     
     /**
-     * Tokenize with custom configuration
+     * Tokenize text with specific configuration
      * @param Text - Input text
-     * @param Config - Custom tokenization settings
+     * @param Config - Tokenization configuration
      * @return Token stream
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer",
-              meta=(DisplayName="Tokenize With Config"))
-    FRETokenStream TokenizeWithConfig(const FString& Text, const FRETokenizerConfig& Config);
+    static FRETokenStream TokenizeWithConfig(
+        const FString& Text,
+        const FRETokenizerConfig& Config
+    );
     
     /**
-     * Tokenize animation name intelligently
-     * @param AnimationName - Animation name (e.g., "MM_Walk_Forward_01")
-     * @return Token stream with proper segmentation
+     * Tokenize text using knowledge base for vocabularies
+     * @param Text - Input text
+     * @param Config - Tokenization configuration
+     * @param Knowledge - Knowledge base for vocabularies/stopwords
+     * @return Enriched token stream
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer",
-              meta=(DisplayName="Tokenize Animation Name"))
-    FRETokenStream TokenizeAnimationName(const FString& AnimationName);
+    static FRETokenStream TokenizeWithKnowledge(
+        const FString& Text,
+        const FRETokenizerConfig& Config,
+        const FREKnowledgeBase& Knowledge
+    );
+    
+    // ========== TEXT SPLITTING ==========
     
     /**
      * Split text by delimiters
      * @param Text - Input text
-     * @param Delimiters - Delimiter characters
+     * @param Delimiters - Characters to split on
      * @param bKeepDelimiters - Include delimiters as tokens
-     * @return Array of token strings
+     * @return Array of split strings
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer",
-              meta=(DisplayName="Split By Delimiters"))
-    TArray<FString> SplitByDelimiters(const FString& Text, 
-                                      const FString& Delimiters,
-                                      bool bKeepDelimiters = false);
+    static TArray<FString> SplitByDelimiters(
+        const FString& Text,
+        const FString& Delimiters = TEXT(" \t\n\r.,;:!?()[]{}"),
+        bool bKeepDelimiters = false
+    );
+    
+    /**
+     * Split camelCase/PascalCase text
+     * @param Text - CamelCase text
+     * @return Array of component words
+     */
+    static TArray<FString> SplitCamelCase(const FString& Text);
+    
+    /**
+     * Split snake_case text
+     * @param Text - Snake case text
+     * @return Array of component words
+     */
+    static TArray<FString> SplitSnakeCase(const FString& Text);
+    
+    /**
+     * Split kebab-case text
+     * @param Text - Kebab case text
+     * @return Array of component words
+     */
+    static TArray<FString> SplitKebabCase(const FString& Text);
+    
+    /**
+     * Split text with numbers
+     * @param Text - Text with mixed alphanumeric
+     * @return Array with separated numbers and words
+     */
+    static TArray<FString> SplitAlphanumeric(const FString& Text);
     
     // ========== NAMING CONVENTION ==========
     
     /**
      * Detect naming convention of text
      * @param Text - Input text
-     * @return Detected naming convention
+     * @return Detected convention
      */
-    UFUNCTION(BlueprintPure, Category="MM|Tokenizer",
-              meta=(DisplayName="Detect Naming Convention"))
-    ENamingConvention DetectNamingConvention(const FString& Text) const;
-    
-    /**
-     * Split camelCase/PascalCase text
-     * @param Text - CamelCase text
-     * @return Array of components
-     */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer",
-              meta=(DisplayName="Split Camel Case"))
-    TArray<FString> SplitCamelCase(const FString& Text) const;
+    static ERENamingConvention DetectNamingConvention(const FString& Text);
     
     /**
      * Convert between naming conventions
@@ -145,97 +119,88 @@ public:
      * @param ToConvention - Target convention
      * @return Converted text
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer",
-              meta=(DisplayName="Convert Naming Convention"))
-    FString ConvertNamingConvention(const FString& Text,
-                                    ENamingConvention FromConvention,
-                                    ENamingConvention ToConvention);
+    static FString ConvertNamingConvention(
+        const FString& Text,
+        ERENamingConvention FromConvention,
+        ERENamingConvention ToConvention
+    );
+    
+    /**
+     * Intelligently parse animation names
+     * Handles prefixes, suffixes, numbers, etc.
+     * @param AnimationName - e.g., "MM_Walk_Forward_01"
+     * @return Token stream with proper segmentation
+     */
+    static FRETokenStream TokenizeAnimationName(const FString& AnimationName);
+    
+    // ========== TOKEN CREATION ==========
+    
+    /**
+     * Create token from text with metadata
+     * @param Text - Token text
+     * @param StartIndex - Start position in original text
+     * @param EndIndex - End position in original text
+     * @param Type - Token type
+     * @return Configured token
+     */
+    static FREToken CreateToken(
+        const FString& Text,
+        int32 StartIndex,
+        int32 EndIndex,
+        ERETokenType Type = ERETokenType::Word
+    );
+    
+    /**
+     * Classify token type
+     * @param Text - Token text to classify
+     * @return Token type
+     */
+    static ERETokenType ClassifyTokenType(const FString& Text);
     
     // ========== VARIANT GENERATION ==========
     
     /**
-     * Generate variants of a token
+     * Generate text variants (typos, abbreviations, expansions)
      * @param Token - Original token
-     * @param bIncludeTypos - Include common typos
-     * @param bIncludeAbbreviations - Include abbreviations
-     * @param bIncludeExpansions - Include expanded forms
+     * @param bIncludeTypos - Generate common typos
+     * @param bIncludeAbbreviations - Generate abbreviations
+     * @param bIncludeExpansions - Generate expansions
      * @return Array of variants
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Variants",
-              meta=(DisplayName="Generate Variants"))
-    TArray<FString> GenerateVariants(const FString& Token,
-                                     bool bIncludeTypos = true,
-                                     bool bIncludeAbbreviations = true,
-                                     bool bIncludeExpansions = true);
+    static TArray<FString> GenerateVariants(
+        const FString& Token,
+        bool bIncludeTypos = true,
+        bool bIncludeAbbreviations = true,
+        bool bIncludeExpansions = true
+    );
     
     /**
-     * Generate common typos
+     * Generate common typos for a word
+     * Uses keyboard distance and common mistakes
      * @param Word - Original word
      * @param MaxDistance - Maximum edit distance
      * @return Array of typo variants
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Variants",
-              meta=(DisplayName="Generate Typos"))
-    TArray<FString> GenerateTypos(const FString& Word, int32 MaxDistance = 1);
+    static TArray<FString> GenerateTypos(
+        const FString& Word,
+        int32 MaxDistance = 1
+    );
     
     /**
      * Generate abbreviations
      * @param Word - Original word
      * @return Array of abbreviations
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Variants",
-              meta=(DisplayName="Generate Abbreviations"))
-    TArray<FString> GenerateAbbreviations(const FString& Word);
-    
-    // ========== VOCABULARY MANAGEMENT ==========
+    static TArray<FString> GenerateAbbreviations(const FString& Word);
     
     /**
-     * Add vocabulary entry
-     * @param Category - Vocabulary category
-     * @param Entry - Vocabulary entry to add
+     * Generate expansions (opposite of abbreviations)
+     * @param Abbreviation - Abbreviated form
+     * @return Array of possible expansions
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Vocabulary",
-              meta=(DisplayName="Add Vocabulary"))
-    void AddVocabulary(const FString& Category, const FREVocabularyEntry& Entry);
+    static TArray<FString> GenerateExpansions(const FString& Abbreviation);
     
-    /**
-     * Load vocabulary from asset
-     * @param Category - Category name
-     * @param VocabularyAsset - Vocabulary data asset
-     */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Vocabulary",
-              meta=(DisplayName="Load Vocabulary Asset"))
-    void LoadVocabularyAsset(const FString& Category, class UDataAsset* VocabularyAsset);
-    
-    /**
-     * Check if word is in vocabulary
-     * @param Word - Word to check
-     * @param OutCategory - Category containing the word
-     * @return true if word exists in vocabulary
-     */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Vocabulary",
-              meta=(DisplayName="Is In Vocabulary"))
-    bool IsInVocabulary(const FString& Word, FString& OutCategory) const;
-    
-    /**
-     * Get canonical form of word
-     * @param Word - Word to normalize
-     * @return Canonical form
-     */
-    UFUNCTION(BlueprintPure, Category="MM|Tokenizer|Vocabulary",
-              meta=(DisplayName="Get Canonical Form"))
-    FString GetCanonicalForm(const FString& Word) const;
-    
-    /**
-     * Get synonyms for word
-     * @param Word - Word to look up
-     * @return Array of synonyms
-     */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Vocabulary",
-              meta=(DisplayName="Get Synonyms"))
-    TArray<FString> GetSynonyms(const FString& Word) const;
-    
-    // ========== ANALYSIS ==========
+    // ========== TOKEN ANALYSIS ==========
     
     /**
      * Group tokens by similarity
@@ -243,72 +208,167 @@ public:
      * @param SimilarityThreshold - Minimum similarity for grouping
      * @return Array of token groups
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Analysis",
-              meta=(DisplayName="Group Tokens"))
-    TArray<FTokenGroup> GroupTokensBySimilarity(const TArray<FREFuzzyToken>& Tokens,
-                                                  float SimilarityThreshold = 0.7f);
+    static TArray<FRETokenGroup> GroupTokensBySimilarity(
+        const TArray<FREToken>& Tokens,
+        float SimilarityThreshold = 0.7f
+    );
     
     /**
      * Find compound words in token stream
-     * @param Stream - Token stream to analyze
-     * @return Array of compound words found
+     * @param Stream - Token stream
+     * @param Vocabularies - Known compound words
+     * @return Array of identified compounds
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Analysis",
-              meta=(DisplayName="Find Compound Words"))
-    TArray<FString> FindCompoundWords(const FRETokenStream& Stream) const;
+    static TArray<FString> FindCompoundWords(
+        const FRETokenStream& Stream,
+        const TArray<FREVocabularyEntry>& Vocabularies
+    );
     
     /**
-     * Calculate token importance weights
+     * Calculate token weights (TF-IDF style)
      * @param Stream - Token stream
-     * @return Updated stream with weights
+     * @param DocumentFrequencies - Optional document frequencies for IDF
+     * @return Stream with updated weights
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|Analysis",
-              meta=(DisplayName="Calculate Token Weights"))
-    FRETokenStream CalculateTokenWeights(const FRETokenStream& Stream);
+    static FRETokenStream CalculateTokenWeights(
+        const FRETokenStream& Stream,
+        const TMap<FString, float>* DocumentFrequencies = nullptr
+    );
     
     // ========== STOP WORDS ==========
     
     /**
-     * Add stop words to filter
-     * @param Words - Words to add as stop words
+     * Filter stop words from token stream
+     * @param Stream - Token stream
+     * @param StopWords - Set of stop words to filter
+     * @return Filtered stream
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|StopWords",
-              meta=(DisplayName="Add Stop Words"))
-    void AddStopWords(const TArray<FString>& Words);
+    static FRETokenStream FilterStopWords(
+        const FRETokenStream& Stream,
+        const TSet<FString>& StopWords
+    );
     
     /**
-     * Check if word is a stop word
+     * Get default English stop words
+     * @return Set of common stop words
+     */
+    static TSet<FString> GetDefaultStopWords();
+    
+    /**
+     * Check if word is a common stop word
      * @param Word - Word to check
      * @return true if stop word
      */
-    UFUNCTION(BlueprintPure, Category="MM|Tokenizer|StopWords",
-              meta=(DisplayName="Is Stop Word"))
-    bool IsStopWord(const FString& Word) const;
+    static bool IsDefaultStopWord(const FString& Word);
+    
+    // ========== N-GRAMS ==========
     
     /**
-     * Filter stop words from tokens
-     * @param Tokens - Tokens to filter
-     * @return Filtered tokens
+     * Generate character n-grams from text
+     * @param Text - Input text
+     * @param N - Size of grams
+     * @return Array of n-grams
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Tokenizer|StopWords",
-              meta=(DisplayName="Filter Stop Words"))
-    TArray<FREFuzzyToken> FilterStopWords(const TArray<FREFuzzyToken>& Tokens) const;
-    
-    // ========== UTILITIES ==========
-    
-    /**
-     * Clear all caches
-     */
-    void ClearCache();
+    static TArray<FString> GenerateCharacterNGrams(
+        const FString& Text,
+        int32 N = 2
+    );
     
     /**
-     * Get memory usage
-     * @return Memory in bytes
+     * Generate word n-grams from token stream
+     * @param Tokens - Input tokens
+     * @param N - Size of grams
+     * @return Array of n-gram combinations
      */
-    int64 GetMemoryUsage() const;
+    static TArray<FString> GenerateWordNGrams(
+        const TArray<FREToken>& Tokens,
+        int32 N = 2
+    );
+    
+    // ========== UTILITY FUNCTIONS ==========
     
     /**
-     * Initialize default vocabularies
+     * Merge adjacent tokens of same type
+     * @param Stream - Token stream
+     * @return Stream with merged tokens
      */
-    void InitializeDefaultVocabularies();
+    static FRETokenStream MergeAdjacentTokens(const FRETokenStream& Stream);
+    
+    /**
+     * Split tokens that are too long
+     * @param Stream - Token stream
+     * @param MaxLength - Maximum token length
+     * @return Stream with split tokens
+     */
+    static FRETokenStream SplitLongTokens(
+        const FRETokenStream& Stream,
+        int32 MaxLength = 50
+    );
+    
+    /**
+     * Remove tokens below minimum length
+     * @param Stream - Token stream
+     * @param MinLength - Minimum token length
+     * @return Filtered stream
+     */
+    static FRETokenStream RemoveShortTokens(
+        const FRETokenStream& Stream,
+        int32 MinLength = 1
+    );
+    
+    /**
+     * Convert token stream to string representation
+     * @param Stream - Token stream
+     * @param Separator - Separator between tokens
+     * @return String representation
+     */
+    static FString TokenStreamToString(
+        const FRETokenStream& Stream,
+        const FString& Separator = TEXT(" ")
+    );
+    
+    /**
+     * Create token stream from string array
+     * @param Strings - Array of strings
+     * @return Token stream
+     */
+    static FRETokenStream CreateTokenStream(const TArray<FString>& Strings);
+    
+private:
+    // ========== INTERNAL HELPERS ==========
+    
+    /**
+     * Check if character is a delimiter
+     */
+    static FORCEINLINE bool IsDelimiter(TCHAR Char, const FString& Delimiters)
+    {
+        return Delimiters.Contains(FString::Chr(Char));
+    }
+    
+    /**
+     * Check if transition indicates camelCase boundary
+     */
+    static bool IsCamelCaseBoundary(TCHAR Prev, TCHAR Current, TCHAR Next);
+    
+    /**
+     * Common abbreviation patterns
+     */
+    static bool IsCommonAbbreviation(const FString& Text);
+    
+    /**
+     * Get default delimiter set
+     */
+    static FString GetDefaultDelimiters()
+    {
+        return TEXT(" \t\n\r.,;:!?()[]{}'\"-/\\|");
+    }
+    
+    // ========== DELETED CONSTRUCTORS ==========
+    
+    RETokenizer() = delete;
+    ~RETokenizer() = delete;
+    RETokenizer(const RETokenizer&) = delete;
+    RETokenizer& operator=(const RETokenizer&) = delete;
+    RETokenizer(RETokenizer&&) = delete;
+    RETokenizer& operator=(RETokenizer&&) = delete;
 };

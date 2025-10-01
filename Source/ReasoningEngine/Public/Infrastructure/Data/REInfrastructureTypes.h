@@ -8,23 +8,170 @@
  * Core types for preprocessing, tokenization, caching, and processor results.
  */
 
+
+
 // =========================================================================
-// Core Processing Types
+// Normalization Types
 // =========================================================================
 
 /**
  * Text normalization modes
  */
-UENUM(BlueprintType)
+UENUM(BlueprintType, Meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
 enum class ERENormalizationMode : uint8
 {
-    None            UMETA(DisplayName = "None"),
-    Lowercase       UMETA(DisplayName = "Lowercase"),
-    Uppercase       UMETA(DisplayName = "Uppercase"),
-    TrimWhitespace  UMETA(DisplayName = "Trim Whitespace"),
-    RemoveAccents   UMETA(DisplayName = "Remove Accents"),
-    Full            UMETA(DisplayName = "Full Normalization")
+    None                = 0x00  UMETA(DisplayName = "None"),
+    Lowercase           = 0x01  UMETA(DisplayName = "Lowercase"),
+    Uppercase           = 0x02  UMETA(DisplayName = "Uppercase"),  
+    TrimWhitespace      = 0x04  UMETA(DisplayName = "Trim Whitespace"),
+    RemovePunctuation   = 0x08  UMETA(DisplayName = "Remove Punctuation"),
+    RemoveAccents       = 0x10  UMETA(DisplayName = "Remove Accents"),
+    CollapseWhitespace  = 0x20  UMETA(DisplayName = "Collapse Whitespace"),
+    RemoveNumbers       = 0x40  UMETA(DisplayName = "Remove Numbers"),
+    Full                = 0xFF  UMETA(DisplayName = "Full Normalization")
 };
+ENUM_CLASS_FLAGS(ERENormalizationMode);
+
+/**
+ * Unicode normalization forms
+ */
+UENUM(BlueprintType)
+enum class EREUnicodeNormalizationForm : uint8
+{
+    NFC     UMETA(DisplayName = "NFC - Canonical Decomposition, Canonical Composition"),
+    NFD     UMETA(DisplayName = "NFD - Canonical Decomposition"),
+    NFKC    UMETA(DisplayName = "NFKC - Compatibility Decomposition, Canonical Composition"),
+    NFKD    UMETA(DisplayName = "NFKD - Compatibility Decomposition")
+};
+
+/**
+ * Character type classification
+ */
+UENUM(BlueprintType)
+enum class ERECharacterType : uint8
+{
+    Unknown         UMETA(DisplayName = "Unknown"),
+    Letter          UMETA(DisplayName = "Letter"),
+    Digit           UMETA(DisplayName = "Digit"),
+    Whitespace      UMETA(DisplayName = "Whitespace"),
+    Punctuation     UMETA(DisplayName = "Punctuation"),
+    Symbol          UMETA(DisplayName = "Symbol"),
+    Control         UMETA(DisplayName = "Control"),
+    Vowel           UMETA(DisplayName = "Vowel"),
+    Consonant       UMETA(DisplayName = "Consonant")
+};
+
+/**
+ * Normalization configuration
+ */
+USTRUCT(BlueprintType)
+struct REASONINGENGINE_API FRENormalizationConfig
+{
+    GENERATED_BODY()
+    
+    /** Normalization modes to apply */
+    UPROPERTY(BlueprintReadWrite, Category="Normalization", meta=(Bitmask, BitmaskEnum="ERENormalizationMode"))
+    uint8 Modes = static_cast<uint8>(ERENormalizationMode::Lowercase | ERENormalizationMode::TrimWhitespace | ERENormalizationMode::CollapseWhitespace);
+    
+    /** Unicode normalization form */
+    UPROPERTY(BlueprintReadWrite, Category="Normalization")
+    EREUnicodeNormalizationForm UnicodeForm = EREUnicodeNormalizationForm::NFC;
+    
+    /** Whether to convert to ASCII */
+    UPROPERTY(BlueprintReadWrite, Category="Normalization")
+    bool bConvertToAscii = false;
+    
+    /** Character to use when replacing non-ASCII characters */
+    UPROPERTY(BlueprintReadWrite, Category="Normalization")
+    FString AsciiReplacementChar = TEXT("");
+    
+    /** Custom characters to remove (in addition to standard punctuation) */
+    UPROPERTY(BlueprintReadWrite, Category="Normalization")
+    FString CustomRemoveChars = TEXT("");
+    
+    /** Custom characters to keep (overrides removal) */
+    UPROPERTY(BlueprintReadWrite, Category="Normalization")
+    FString CustomKeepChars = TEXT("");
+    
+    /** Minimum length for normalized text (shorter text is rejected) */
+    UPROPERTY(BlueprintReadWrite, Category="Validation", meta=(ClampMin=0))
+    int32 MinLength = 0;
+    
+    /** Maximum length for normalized text (longer text is truncated) */
+    UPROPERTY(BlueprintReadWrite, Category="Validation", meta=(ClampMin=0))
+    int32 MaxLength = 0;
+    
+    FRENormalizationConfig()
+    {
+        Modes = static_cast<uint8>(ERENormalizationMode::Lowercase) | 
+                static_cast<uint8>(ERENormalizationMode::TrimWhitespace) | 
+                static_cast<uint8>(ERENormalizationMode::CollapseWhitespace);
+    }
+    
+    /** Check if a specific mode is enabled */
+    bool HasMode(ERENormalizationMode Mode) const
+    {
+        return (Modes & static_cast<uint8>(Mode)) != 0;
+    }
+    
+    /** Enable a specific mode */
+    void EnableMode(ERENormalizationMode Mode)
+    {
+        Modes |= static_cast<uint8>(Mode);
+    }
+    
+    /** Disable a specific mode */
+    void DisableMode(ERENormalizationMode Mode)
+    {
+        Modes &= ~static_cast<uint8>(Mode);
+    }
+};
+
+/**
+ * Normalization result with metadata
+ */
+USTRUCT(BlueprintType)
+struct REASONINGENGINE_API FRENormalizationResult
+{
+    GENERATED_BODY()
+    
+    /** Original input text */
+    UPROPERTY(BlueprintReadOnly, Category="Result")
+    FString OriginalText;
+    
+    /** Normalized text */
+    UPROPERTY(BlueprintReadOnly, Category="Result")
+    FString NormalizedText;
+    
+    /** Configuration used for normalization */
+    UPROPERTY(BlueprintReadOnly, Category="Result")
+    FRENormalizationConfig UsedConfig;
+    
+    /** Whether text was modified */
+    UPROPERTY(BlueprintReadOnly, Category="Result")
+    bool bWasModified = false;
+    
+    /** Number of characters removed */
+    UPROPERTY(BlueprintReadOnly, Category="Statistics")
+    int32 CharactersRemoved = 0;
+    
+    /** Number of characters changed */
+    UPROPERTY(BlueprintReadOnly, Category="Statistics")
+    int32 CharactersChanged = 0;
+    
+    /** Processing time in milliseconds */
+    UPROPERTY(BlueprintReadOnly, Category="Performance")
+    float ProcessingTimeMs = 0.0f;
+    
+    /** Any warnings during normalization */
+    UPROPERTY(BlueprintReadOnly, Category="Debug")
+    TArray<FString> Warnings;
+};
+
+// =========================================================================
+// Core Processing Types
+// =========================================================================
+
 
 /**
  * Processing mode for the reasoning engine
@@ -50,37 +197,6 @@ enum class ERELogLevel : uint8
     Info            UMETA(DisplayName = "Info"),
     Verbose         UMETA(DisplayName = "Verbose"),
     VeryVerbose     UMETA(DisplayName = "Very Verbose")
-};
-
-/**
- * Text normalization configuration
- * Used by URENormalizer for text preprocessing
- */
-USTRUCT(BlueprintType)
-struct REASONINGENGINE_API FRENormalizationConfig
-{
-    GENERATED_BODY()
-    
-    UPROPERTY(BlueprintReadWrite, Category="Normalization")
-    bool bLowercase = true;
-    
-    UPROPERTY(BlueprintReadWrite, Category="Normalization")
-    bool bTrimWhitespace = true;
-    
-    UPROPERTY(BlueprintReadWrite, Category="Normalization")
-    bool bRemoveAccents = true;
-    
-    UPROPERTY(BlueprintReadWrite, Category="Normalization")
-    bool bCollapseWhitespace = true;
-    
-    UPROPERTY(BlueprintReadWrite, Category="Normalization")
-    bool bRemovePunctuation = false;
-    
-    UPROPERTY(BlueprintReadWrite, Category="Normalization")
-    bool bRemoveNumbers = false;
-    
-    UPROPERTY(BlueprintReadWrite, Category="Normalization")
-    bool bPreserveCase = false;
 };
 
 /**

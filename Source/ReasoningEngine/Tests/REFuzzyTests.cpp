@@ -17,7 +17,7 @@ bool FREFuzzyHarnessTest::RunTest(const FString& Parameters)
 		static_cast<EREFuzzyAlgorithm>(AlgoIndex);
 
 		// Run fuzzy comparison (your real implementation computes all metrics)
-		FREStringMatch Result = UREFuzzy::CompareStrings(A, B, true);
+		FREStringMatch Result = REFuzzy::CompareStrings(A, B, true);
 
 		FString AlgoName = StaticEnum<EREFuzzyAlgorithm>()->GetNameStringByValue(AlgoIndex);
 

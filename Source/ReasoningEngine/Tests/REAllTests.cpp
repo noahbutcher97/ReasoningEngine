@@ -22,7 +22,7 @@ bool FRESemanticAllHarnessTest::RunTest(const FString& Parameters)
     {
         static_cast<EREFuzzyAlgorithm>(AlgoIndex);
 
-        FREStringMatch Result = UREFuzzy::CompareStrings(A, B, true);
+        FREStringMatch Result = REFuzzy::CompareStrings(A, B, true);
 
         FString AlgoName = StaticEnum<EREFuzzyAlgorithm>()->GetNameStringByValue(AlgoIndex);
         UE_LOG(LogTemp, Display,

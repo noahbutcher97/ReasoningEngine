@@ -1,106 +1,18 @@
-﻿#include "Core/RENormalizer.h"
+﻿// Source/ReasoningEngine/Private/Infrastructure/RENormalizer.cpp
+#include "Infrastructure/RENormalizer.h"
 #include "ReasoningEngine.h"
+#include "Internationalization/Regex.h"
 
-// Static member initialization
-TMap<TCHAR, TCHAR> URENormalizer::AccentMap;
-bool URENormalizer::bAccentMapInitialized = false;
+// ========== PRIMARY NORMALIZATION ==========
 
-void URENormalizer::InitializeAccentMap()
+FString RENormalizer::NormalizeText(const FString& Text)
 {
-    if (bAccentMapInitialized)
-    {
-        return;
-    }
-    
-    AccentMap.Empty(256);
-    
-    // Lowercase accents
-    AccentMap.Add(TEXT('à'), TEXT('a'));
-    AccentMap.Add(TEXT('á'), TEXT('a'));
-    AccentMap.Add(TEXT('â'), TEXT('a'));
-    AccentMap.Add(TEXT('ã'), TEXT('a'));
-    AccentMap.Add(TEXT('ä'), TEXT('a'));
-    AccentMap.Add(TEXT('å'), TEXT('a'));
-    AccentMap.Add(TEXT('æ'), TEXT('a'));
-    
-    AccentMap.Add(TEXT('ç'), TEXT('c'));
-    
-    AccentMap.Add(TEXT('è'), TEXT('e'));
-    AccentMap.Add(TEXT('é'), TEXT('e'));
-    AccentMap.Add(TEXT('ê'), TEXT('e'));
-    AccentMap.Add(TEXT('ë'), TEXT('e'));
-    
-    AccentMap.Add(TEXT('ì'), TEXT('i'));
-    AccentMap.Add(TEXT('í'), TEXT('i'));
-    AccentMap.Add(TEXT('î'), TEXT('i'));
-    AccentMap.Add(TEXT('ï'), TEXT('i'));
-    
-    AccentMap.Add(TEXT('ñ'), TEXT('n'));
-    
-    AccentMap.Add(TEXT('ò'), TEXT('o'));
-    AccentMap.Add(TEXT('ó'), TEXT('o'));
-    AccentMap.Add(TEXT('ô'), TEXT('o'));
-    AccentMap.Add(TEXT('õ'), TEXT('o'));
-    AccentMap.Add(TEXT('ö'), TEXT('o'));
-    AccentMap.Add(TEXT('ø'), TEXT('o'));
-    
-    AccentMap.Add(TEXT('ù'), TEXT('u'));
-    AccentMap.Add(TEXT('ú'), TEXT('u'));
-    AccentMap.Add(TEXT('û'), TEXT('u'));
-    AccentMap.Add(TEXT('ü'), TEXT('u'));
-    
-    AccentMap.Add(TEXT('ý'), TEXT('y'));
-    AccentMap.Add(TEXT('ÿ'), TEXT('y'));
-    
-    // Uppercase accents
-    AccentMap.Add(TEXT('À'), TEXT('A'));
-    AccentMap.Add(TEXT('Á'), TEXT('A'));
-    AccentMap.Add(TEXT('Â'), TEXT('A'));
-    AccentMap.Add(TEXT('Ã'), TEXT('A'));
-    AccentMap.Add(TEXT('Ä'), TEXT('A'));
-    AccentMap.Add(TEXT('Å'), TEXT('A'));
-    AccentMap.Add(TEXT('Æ'), TEXT('A'));
-    
-    AccentMap.Add(TEXT('Ç'), TEXT('C'));
-    
-    AccentMap.Add(TEXT('È'), TEXT('E'));
-    AccentMap.Add(TEXT('É'), TEXT('E'));
-    AccentMap.Add(TEXT('Ê'), TEXT('E'));
-    AccentMap.Add(TEXT('Ë'), TEXT('E'));
-    
-    AccentMap.Add(TEXT('Ì'), TEXT('I'));
-    AccentMap.Add(TEXT('Í'), TEXT('I'));
-    AccentMap.Add(TEXT('Î'), TEXT('I'));
-    AccentMap.Add(TEXT('Ï'), TEXT('I'));
-    
-    AccentMap.Add(TEXT('Ñ'), TEXT('N'));
-    
-    AccentMap.Add(TEXT('Ò'), TEXT('O'));
-    AccentMap.Add(TEXT('Ó'), TEXT('O'));
-    AccentMap.Add(TEXT('Ô'), TEXT('O'));
-    AccentMap.Add(TEXT('Õ'), TEXT('O'));
-    AccentMap.Add(TEXT('Ö'), TEXT('O'));
-    AccentMap.Add(TEXT('Ø'), TEXT('O'));
-    
-    AccentMap.Add(TEXT('Ù'), TEXT('U'));
-    AccentMap.Add(TEXT('Ú'), TEXT('U'));
-    AccentMap.Add(TEXT('Û'), TEXT('U'));
-    AccentMap.Add(TEXT('Ü'), TEXT('U'));
-    
-    AccentMap.Add(TEXT('Ý'), TEXT('Y'));
-    AccentMap.Add(TEXT('Ÿ'), TEXT('Y'));
-    
-    bAccentMapInitialized = true;
+    // Default configuration
+    FRENormalizationConfig DefaultConfig;
+    return NormalizeTextWithConfig(Text, DefaultConfig);
 }
 
-// ========== MAIN NORMALIZATION ==========
-
-FString URENormalizer::Normalize(const FString& Text)
-{
-    return NormalizeWithConfig(Text, GetDefaultConfig());
-}
-
-FString URENormalizer::NormalizeWithConfig(const FString& Text, const FReNormalizationConfig& Config)
+FString RENormalizer::NormalizeTextWithConfig(const FString& Text, const FRENormalizationConfig& Config)
 {
     if (Text.IsEmpty())
     {
@@ -109,277 +21,469 @@ FString URENormalizer::NormalizeWithConfig(const FString& Text, const FReNormali
     
     FString Result = Text;
     
-    // Apply normalization in specific order for best results
+    // Apply normalization modes in specific order for best results
     
-    // 1. Remove accents first (before case changes)
-    if (Config.bRemoveAccents)
+    // 1. Unicode normalization (if needed)
+    if (Config.UnicodeForm != EREUnicodeNormalizationForm::NFC)
+    {
+        Result = NormalizeUnicode(Result, Config.UnicodeForm);
+    }
+    
+    // 2. Remove custom characters
+    if (!Config.CustomRemoveChars.IsEmpty())
+    {
+        for (TCHAR Char : Config.CustomRemoveChars)
+        {
+            Result = Result.Replace(&Char, TEXT(""));
+        }
+    }
+    
+    // 3. Apply case conversion
+    if (Config.HasMode(ERENormalizationMode::Lowercase))
+    {
+        Result = ToLowercase(Result);
+    }
+    else if (Config.HasMode(ERENormalizationMode::Uppercase))
+    {
+        Result = ToUppercase(Result);
+    }
+    
+    // 4. Remove accents
+    if (Config.HasMode(ERENormalizationMode::RemoveAccents))
     {
         Result = RemoveAccents(Result);
     }
     
-    // 2. Case normalization
-    if (Config.bLowercase && !Config.bPreserveCase)
-    {
-        Result = ToLowercase(Result);
-    }
-    
-    // 3. Remove unwanted characters
-    if (Config.bRemovePunctuation)
-    {
-        Result = RemovePunctuation(Result, true);
-    }
-    
-    if (Config.bRemoveNumbers)
+    // 5. Remove numbers
+    if (Config.HasMode(ERENormalizationMode::RemoveNumbers))
     {
         Result = RemoveNumbers(Result);
     }
     
-    // 4. Whitespace normalization (do this last)
-    if (Config.bTrimWhitespace)
+    // 6. Remove punctuation
+    if (Config.HasMode(ERENormalizationMode::RemovePunctuation))
     {
-        Result = TrimWhitespace(Result);
+        Result = RemovePunctuation(Result);
     }
     
-    if (Config.bCollapseWhitespace)
+    // 7. Collapse whitespace
+    if (Config.HasMode(ERENormalizationMode::CollapseWhitespace))
     {
         Result = CollapseWhitespace(Result);
     }
     
+    // 8. Trim whitespace
+    if (Config.HasMode(ERENormalizationMode::TrimWhitespace))
+    {
+        Result = TrimWhitespace(Result);
+    }
+    
+    // 9. Convert to ASCII if requested
+    if (Config.bConvertToAscii)
+    {
+        Result = ToAscii(Result, Config.AsciiReplacementChar);
+    }
+    
+    // 10. Apply length constraints
+    if (Config.MinLength > 0 && Result.Len() < Config.MinLength)
+    {
+        UE_LOG(LogReasoningEngine, Warning, TEXT("Normalized text too short: %d < %d"), Result.Len(), Config.MinLength);
+        return TEXT("");
+    }
+    
+    if (Config.MaxLength > 0 && Result.Len() > Config.MaxLength)
+    {
+        Result = Result.Left(Config.MaxLength);
+    }
+    
     return Result;
 }
 
-FString URENormalizer::NormalizeWithMode(const FString& Text, ERENormalizationMode Mode)
-{
-    switch (Mode)
-    {
-        case ERENormalizationMode::None:
-            return Text;
-            
-        case ERENormalizationMode::Lowercase:
-            return ToLowercase(Text);
-            
-        case ERENormalizationMode::Uppercase:
-            return ToUppercase(Text);
-            
-        case ERENormalizationMode::TrimWhitespace:
-            return TrimWhitespace(Text);
-            
-        case ERENormalizationMode::RemoveAccents:
-            return RemoveAccents(Text);
-            
-        case ERENormalizationMode::Full:
-            return NormalizeWithConfig(Text, GetDefaultConfig());
-            
-        default:
-            return Text;
-    }
-}
+// ========== SPECIFIC NORMALIZATIONS ==========
 
-// ========== INDIVIDUAL OPERATIONS ==========
-
-FString URENormalizer::ToLowercase(const FString& Text)
+FString RENormalizer::ToLowercase(const FString& Text)
 {
     return Text.ToLower();
 }
 
-FString URENormalizer::ToUppercase(const FString& Text)
+FString RENormalizer::ToUppercase(const FString& Text)
 {
     return Text.ToUpper();
 }
 
-FString URENormalizer::TrimWhitespace(const FString& Text)
+FString RENormalizer::TrimWhitespace(const FString& Text)
 {
     return Text.TrimStartAndEnd();
 }
 
-FString URENormalizer::CollapseWhitespace(const FString& Text)
+FString RENormalizer::RemovePunctuation(const FString& Text)
 {
     FString Result;
     Result.Reserve(Text.Len());
     
-    bool bLastWasSpace = false;
-    
-    for (TCHAR Ch : Text)
+    for (TCHAR Char : Text)
     {
-        if (FChar::IsWhitespace(Ch))
+        if (!FChar::IsPunctuation(Char))
         {
-            if (!bLastWasSpace)
+            Result.AppendChar(Char);
+        }
+    }
+    
+    return Result;
+}
+
+FString RENormalizer::RemoveAccents(const FString& Text)
+{
+    FString Result;
+    Result.Reserve(Text.Len());
+    
+    // Common accent replacements
+    static const TMap<TCHAR, TCHAR> AccentMap = {
+        {TEXT('à'), TEXT('a')}, {TEXT('á'), TEXT('a')}, {TEXT('â'), TEXT('a')}, {TEXT('ã'), TEXT('a')}, {TEXT('ä'), TEXT('a')}, {TEXT('å'), TEXT('a')},
+        {TEXT('è'), TEXT('e')}, {TEXT('é'), TEXT('e')}, {TEXT('ê'), TEXT('e')}, {TEXT('ë'), TEXT('e')},
+        {TEXT('ì'), TEXT('i')}, {TEXT('í'), TEXT('i')}, {TEXT('î'), TEXT('i')}, {TEXT('ï'), TEXT('i')},
+        {TEXT('ò'), TEXT('o')}, {TEXT('ó'), TEXT('o')}, {TEXT('ô'), TEXT('o')}, {TEXT('õ'), TEXT('o')}, {TEXT('ö'), TEXT('o')}, {TEXT('ø'), TEXT('o')},
+        {TEXT('ù'), TEXT('u')}, {TEXT('ú'), TEXT('u')}, {TEXT('û'), TEXT('u')}, {TEXT('ü'), TEXT('u')},
+        {TEXT('ý'), TEXT('y')}, {TEXT('ÿ'), TEXT('y')},
+        {TEXT('ñ'), TEXT('n')}, {TEXT('ç'), TEXT('c')},
+        // Uppercase
+        {TEXT('À'), TEXT('A')}, {TEXT('Á'), TEXT('A')}, {TEXT('Â'), TEXT('A')}, {TEXT('Ã'), TEXT('A')}, {TEXT('Ä'), TEXT('A')}, {TEXT('Å'), TEXT('A')},
+        {TEXT('È'), TEXT('E')}, {TEXT('É'), TEXT('E')}, {TEXT('Ê'), TEXT('E')}, {TEXT('Ë'), TEXT('E')},
+        {TEXT('Ì'), TEXT('I')}, {TEXT('Í'), TEXT('I')}, {TEXT('Î'), TEXT('I')}, {TEXT('Ï'), TEXT('I')},
+        {TEXT('Ò'), TEXT('O')}, {TEXT('Ó'), TEXT('O')}, {TEXT('Ô'), TEXT('O')}, {TEXT('Õ'), TEXT('O')}, {TEXT('Ö'), TEXT('O')}, {TEXT('Ø'), TEXT('O')},
+        {TEXT('Ù'), TEXT('U')}, {TEXT('Ú'), TEXT('U')}, {TEXT('Û'), TEXT('U')}, {TEXT('Ü'), TEXT('U')},
+        {TEXT('Ý'), TEXT('Y')}, {TEXT('Ñ'), TEXT('N')}, {TEXT('Ç'), TEXT('C')}
+    };
+    
+    for (TCHAR Char : Text)
+    {
+        if (const TCHAR* Replacement = AccentMap.Find(Char))
+        {
+            Result.AppendChar(*Replacement);
+        }
+        else
+        {
+            Result.AppendChar(Char);
+        }
+    }
+    
+    return Result;
+}
+
+FString RENormalizer::CollapseWhitespace(const FString& Text)
+{
+    FString Result;
+    Result.Reserve(Text.Len());
+    
+    bool bInWhitespace = false;
+    
+    for (TCHAR Char : Text)
+    {
+        if (FChar::IsWhitespace(Char))
+        {
+            if (!bInWhitespace)
             {
                 Result.AppendChar(TEXT(' '));
-                bLastWasSpace = true;
+                bInWhitespace = true;
             }
         }
         else
         {
-            Result.AppendChar(Ch);
-            bLastWasSpace = false;
+            Result.AppendChar(Char);
+            bInWhitespace = false;
         }
     }
     
     return Result;
 }
 
-FString URENormalizer::RemoveAccents(const FString& Text)
-{
-    InitializeAccentMap();
-    
-    FString Result;
-    Result.Reserve(Text.Len());
-    
-    for (TCHAR Ch : Text)
-    {
-        TCHAR NormalizedChar = RemoveAccentFromChar(Ch);
-        Result.AppendChar(NormalizedChar);
-    }
-    
-    return Result;
-}
-
-FString URENormalizer::RemovePunctuation(const FString& Text, bool bKeepSpaces)
+FString RENormalizer::RemoveNumbers(const FString& Text)
 {
     FString Result;
     Result.Reserve(Text.Len());
     
-    for (TCHAR Ch : Text)
+    for (TCHAR Char : Text)
     {
-        if (FChar::IsAlnum(Ch) || (bKeepSpaces && FChar::IsWhitespace(Ch)))
+        if (!FChar::IsDigit(Char))
         {
-            Result.AppendChar(Ch);
+            Result.AppendChar(Char);
         }
     }
     
     return Result;
 }
 
-FString URENormalizer::RemoveNumbers(const FString& Text)
+FString RENormalizer::RemoveSpecialCharacters(const FString& Text)
 {
     FString Result;
     Result.Reserve(Text.Len());
     
-    for (TCHAR Ch : Text)
+    for (TCHAR Char : Text)
     {
-        if (!FChar::IsDigit(Ch))
+        if (FChar::IsAlnum(Char) || FChar::IsWhitespace(Char))
         {
-            Result.AppendChar(Ch);
+            Result.AppendChar(Char);
         }
     }
     
     return Result;
 }
 
-FString URENormalizer::KeepAlphanumeric(const FString& Text, bool bKeepSpaces)
+// ========== TEXT ANALYSIS ==========
+
+bool RENormalizer::IsAlphabetic(const FString& Text)
+{
+    if (Text.IsEmpty()) return false;
+    
+    for (TCHAR Char : Text)
+    {
+        if (!FChar::IsAlpha(Char))
+        {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+bool RENormalizer::IsAlphanumeric(const FString& Text)
+{
+    if (Text.IsEmpty()) return false;
+    
+    for (TCHAR Char : Text)
+    {
+        if (!FChar::IsAlnum(Char))
+        {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+bool RENormalizer::IsNumeric(const FString& Text)
+{
+    if (Text.IsEmpty()) return false;
+    
+    for (TCHAR Char : Text)
+    {
+        if (!FChar::IsDigit(Char))
+        {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+bool RENormalizer::ContainsPunctuation(const FString& Text)
+{
+    for (TCHAR Char : Text)
+    {
+        if (FChar::IsPunctuation(Char))
+        {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+bool RENormalizer::ContainsWhitespace(const FString& Text)
+{
+    for (TCHAR Char : Text)
+    {
+        if (FChar::IsWhitespace(Char))
+        {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// ========== UNICODE HANDLING ==========
+
+FString RENormalizer::NormalizeUnicode(const FString& Text, EREUnicodeNormalizationForm Form)
+{
+    // Note: Unreal doesn't have built-in Unicode normalization
+    // This would require ICU or similar library for full implementation
+    // For now, return the text unchanged
+    
+    UE_LOG(LogReasoningEngine, Verbose, TEXT("Unicode normalization not fully implemented, returning original text"));
+    return Text;
+}
+
+FString RENormalizer::ToAscii(const FString& Text, const FString& ReplacementChar)
 {
     FString Result;
     Result.Reserve(Text.Len());
     
-    for (TCHAR Ch : Text)
+    for (TCHAR Char : Text)
     {
-        if (FChar::IsAlnum(Ch) || (bKeepSpaces && FChar::IsWhitespace(Ch)))
+        if (Char <= 127) // ASCII range
         {
-            Result.AppendChar(Ch);
+            Result.AppendChar(Char);
+        }
+        else if (!ReplacementChar.IsEmpty())
+        {
+            Result.Append(ReplacementChar);
+        }
+        // else skip non-ASCII characters
+    }
+    
+    return Result;
+}
+
+// ========== CASE CONVERSION ==========
+
+FString RENormalizer::ToTitleCase(const FString& Text)
+{
+    FString Result;
+    Result.Reserve(Text.Len());
+    
+    bool bNextIsTitle = true;
+    
+    for (TCHAR Char : Text)
+    {
+        if (FChar::IsWhitespace(Char))
+        {
+            Result.AppendChar(Char);
+            bNextIsTitle = true;
+        }
+        else if (bNextIsTitle && FChar::IsAlpha(Char))
+        {
+            Result.AppendChar(FChar::ToUpper(Char));
+            bNextIsTitle = false;
+        }
+        else
+        {
+            Result.AppendChar(FChar::ToLower(Char));
         }
     }
     
     return Result;
 }
 
-// ========== CHARACTER OPERATIONS ==========
-
-FString URENormalizer::NormalizeChar(TCHAR Char, const FReNormalizationConfig& Config)
+FString RENormalizer::ToSentenceCase(const FString& Text)
 {
-    // Handle accent removal
-    if (Config.bRemoveAccents)
-    {
-        Char = RemoveAccentFromChar(Char);
-    }
+    FString Result = Text.ToLower();
     
-    // Handle case conversion
-    if (Config.bLowercase && !Config.bPreserveCase)
+    if (Result.Len() > 0)
     {
-        Char = FChar::ToLower(Char);
-    }
-    
-    // Handle character filtering
-    if (Config.bRemovePunctuation && FChar::IsPunctuation(Char))
-    {
-        return TEXT("");
-    }
-    
-    if (Config.bRemoveNumbers && FChar::IsDigit(Char))
-    {
-        return TEXT("");
-    }
-    
-    // Handle whitespace
-    if (FChar::IsWhitespace(Char))
-    {
-        if (Config.bCollapseWhitespace)
+        Result[0] = FChar::ToUpper(Result[0]);
+        
+        // Find sentence endings and capitalize next letter
+        static const FString SentenceEnders = TEXT(".!?");
+        
+        bool bCapitalizeNext = false;
+        for (int32 i = 1; i < Result.Len(); i++)
         {
-            return TEXT(" ");
+            if (bCapitalizeNext && FChar::IsAlpha(Result[i]))
+            {
+                Result[i] = FChar::ToUpper(Result[i]);
+                bCapitalizeNext = false;
+            }
+            else if (SentenceEnders.Contains(FString::Chr(Result[i])))
+            {
+                bCapitalizeNext = true;
+            }
         }
     }
     
-    return FString::Chr(Char);
+    return Result;
 }
 
-TCHAR URENormalizer::RemoveAccentFromChar(TCHAR Char)
+FString RENormalizer::FromCamelCase(const FString& Text)
 {
-    InitializeAccentMap();
+    FString Result;
+    Result.Reserve(Text.Len() * 2);
     
-    if (TCHAR* Normalized = AccentMap.Find(Char))
+    for (int32 i = 0; i < Text.Len(); i++)
     {
-        return *Normalized;
+        TCHAR Char = Text[i];
+        
+        // Add space before uppercase letters (except first char)
+        if (i > 0 && FChar::IsUpper(Char))
+        {
+            // Don't add space if previous char was already uppercase (acronym)
+            if (i == 1 || !FChar::IsUpper(Text[i-1]))
+            {
+                Result.AppendChar(TEXT(' '));
+            }
+        }
+        
+        Result.AppendChar(FChar::ToLower(Char));
     }
     
-    return Char;
+    return Result;
 }
 
-bool URENormalizer::IsAccentedChar(TCHAR Char)
+FString RENormalizer::FromSnakeCase(const FString& Text)
 {
-    InitializeAccentMap();
-    return AccentMap.Contains(Char);
+    return Text.Replace(TEXT("_"), TEXT(" "));
 }
 
-// ========== CONFIGURATIONS ==========
-
-FReNormalizationConfig URENormalizer::GetDefaultConfig()
+FString RENormalizer::FromKebabCase(const FString& Text)
 {
-    FReNormalizationConfig Config;
-    Config.bLowercase = true;
-    Config.bTrimWhitespace = true;
-    Config.bRemoveAccents = true;
-    Config.bCollapseWhitespace = true;
-    Config.bRemovePunctuation = false;
-    Config.bRemoveNumbers = false;
-    Config.bPreserveCase = false;
+    return Text.Replace(TEXT("-"), TEXT(" "));
+}
+
+// ========== UTILITY FUNCTIONS ==========
+
+ERECharacterType RENormalizer::GetCharacterType(TCHAR Char)
+{
+    if (FChar::IsAlpha(Char))
+    {
+        if (IsVowel(Char))
+        {
+            return ERECharacterType::Vowel;
+        }
+        else
+        {
+            return ERECharacterType::Consonant;
+        }
+    }
+    else if (FChar::IsDigit(Char))
+    {
+        return ERECharacterType::Digit;
+    }
+    else if (FChar::IsWhitespace(Char))
+    {
+        return ERECharacterType::Whitespace;
+    }
+    else if (FChar::IsPunctuation(Char))
+    {
+        return ERECharacterType::Punctuation;
+    }
+    else if (FChar::IsControl(Char))
+    {
+        return ERECharacterType::Control;
+    }
+    else
+    {
+        return ERECharacterType::Symbol;
+    }
+}
+
+bool RENormalizer::IsVowel(TCHAR Char)
+{
+    TCHAR Upper = FChar::ToUpper(Char);
+    return Upper == TEXT('A') || Upper == TEXT('E') || Upper == TEXT('I') || 
+           Upper == TEXT('O') || Upper == TEXT('U') || Upper == TEXT('Y');
+}
+
+bool RENormalizer::IsConsonant(TCHAR Char)
+{
+    return FChar::IsAlpha(Char) && !IsVowel(Char);
+}
+
+FString RENormalizer::GetComparisonForm(const FString& Text)
+{
+    // Aggressive normalization for comparison
+    FRENormalizationConfig Config;
+    Config.Modes = static_cast<uint8>(ERENormalizationMode::Full);
+    Config.bConvertToAscii = true;
     
-    return Config;
-}
-
-FReNormalizationConfig URENormalizer::GetAggressiveConfig()
-{
-    FReNormalizationConfig Config;
-    Config.bLowercase = true;
-    Config.bTrimWhitespace = true;
-    Config.bRemoveAccents = true;
-    Config.bCollapseWhitespace = true;
-    Config.bRemovePunctuation = true;
-    Config.bRemoveNumbers = true;
-    Config.bPreserveCase = false;
-    
-    return Config;
-}
-
-FReNormalizationConfig URENormalizer::GetMinimalConfig()
-{
-    FReNormalizationConfig Config;
-    Config.bLowercase = false;
-    Config.bTrimWhitespace = true;
-    Config.bRemoveAccents = false;
-    Config.bCollapseWhitespace = false;
-    Config.bRemovePunctuation = false;
-    Config.bRemoveNumbers = false;
-    Config.bPreserveCase = true;
-    
-    return Config;
+    return NormalizeTextWithConfig(Text, Config);
 }

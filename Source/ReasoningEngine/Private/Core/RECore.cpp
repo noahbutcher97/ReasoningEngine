@@ -114,7 +114,7 @@ void URECore::InitializeCoreComponents()
     UE_LOG(LogReasoningEngine, Log, TEXT("Initializing core components"));
     
     // Create all components with proper outer
-    FuzzyMatcher = NewObject<UREFuzzy>(this, TEXT("FuzzyMatcher"));
+    FuzzyMatcher = NewObject<REFuzzy>(this, TEXT("FuzzyMatcher"));
     Tokenizer = NewObject<URETokenizer>(this, TEXT("Tokenizer"));
     PatternEngine = NewObject<UREPatterns>(this, TEXT("PatternEngine"));
     KnowledgeBase = NewObject<UREKnowledge>(this, TEXT("KnowledgeBase"));
@@ -193,7 +193,7 @@ void URECore::ConnectComponentDependencies()
 
 // ========== COMPONENT ACCESS ==========
 
-UREFuzzy* URECore::GetFuzzyMatcher()
+REFuzzy* URECore::GetFuzzyMatcher()
 {
     if (!FuzzyMatcher)
     {

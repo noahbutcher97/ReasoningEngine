@@ -85,7 +85,7 @@ void UREEngineConfiguration::ApplyToEngine(URECore* Engine) const
     }
     
     // Apply component configurations
-    if (UREFuzzy* FuzzyMatcher = Engine->GetFuzzyMatcher())
+    if (REFuzzy* FuzzyMatcher = Engine->GetFuzzyMatcher())
     {
         // Apply fuzzy matcher config
         FuzzyMatcher->SetMultithreading(FuzzyMatcherConfig.bUseMultithreading, 

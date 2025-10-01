@@ -7,7 +7,7 @@
 #include "RECore.generated.h"
 
 // Forward declarations
-class UREFuzzy;
+class REFuzzy;
 class URETokenizer;
 class UREPatterns;
 class UREKnowledge;
@@ -39,7 +39,7 @@ private:
     // ========== CORE COMPONENTS ==========
     
     UPROPERTY()
-    UREFuzzy* FuzzyMatcher;
+    REFuzzy* FuzzyMatcher;
     
     UPROPERTY()
     URETokenizer* Tokenizer;
@@ -126,7 +126,7 @@ public:
      */
     UFUNCTION(BlueprintCallable, Category="MM|Semantic|Components",
               meta=(DisplayName="Get Fuzzy Matcher"))
-    UREFuzzy* GetFuzzyMatcher();
+    REFuzzy* GetFuzzyMatcher();
     
     /**
      * Get the tokenizer component

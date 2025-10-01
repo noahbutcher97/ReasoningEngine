@@ -1,184 +1,238 @@
-﻿#pragma once
+﻿// Source/ReasoningEngine/Public/Infrastructure/RENormalizer.h
+#pragma once
 
 #include "CoreMinimal.h"
-#include "Infrastructure//Data/REInfrastructureTypes.h"
-#include "RENormalizer.generated.h"
+#include "Infrastructure/Data/REInfrastructureTypes.h"
 
 /**
- * Core text normalization utility
- * Provides universal text cleanup that is safe for all systems
- * Lives in Core as it's infrastructure, not interpretation
+ * Static utility class for text normalization
+ * First step in the processing pipeline - no dependencies
+ * Pure text transformation functions
+ * 
+ * Design Philosophy:
+ * - Completely stateless
+ * - No UObject overhead
+ * - Thread-safe by design
+ * - Foundation for all text processing
  */
-UCLASS(BlueprintType)
-class REASONINGENGINE_API URENormalizer : public UObject
+class REASONINGENGINE_API RENormalizer
 {
-    GENERATED_BODY()
-    
-private:
-    // Accent mapping for Latin characters
-    static TMap<TCHAR, TCHAR> AccentMap;
-    static bool bAccentMapInitialized;
-    
-    // Initialize accent mappings
-    static void InitializeAccentMap();
-    
 public:
-    // ========== NORMALIZATION METHODS ==========
+    // ========== PRIMARY NORMALIZATION ==========
     
     /**
-     * Normalize text with default configuration
+     * Normalize text with default settings
+     * Default: lowercase, trim, collapse whitespace, remove extra punctuation
      * @param Text - Input text to normalize
      * @return Normalized text
      */
-    UFUNCTION(BlueprintCallable, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Normalize"))
-    static FString Normalize(const FString& Text);
+    static FString NormalizeText(const FString& Text);
     
     /**
-     * Normalize text with custom configuration
-     * @param Text - Input text
-     * @param Config - Normalization settings
+     * Normalize text with specific configuration
+     * @param Text - Input text to normalize
+     * @param Config - Normalization configuration
      * @return Normalized text
      */
-    UFUNCTION(BlueprintCallable, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Normalize With Config"))
-    static FString NormalizeWithConfig(const FString& Text, 
-                                       const FRENormalizationConfig& Config);
+    static FString NormalizeTextWithConfig(
+        const FString& Text,
+        const FRENormalizationConfig& Config
+    );
+    
+    // ========== SPECIFIC NORMALIZATIONS ==========
     
     /**
-     * Normalize text with specific mode
-     * @param Text - Input text
-     * @param Mode - Normalization mode
-     * @return Normalized text
-     */
-    UFUNCTION(BlueprintCallable, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Normalize With Mode"))
-    static FString NormalizeWithMode(const FString& Text, 
-                                     ERENormalizationMode Mode);
-    
-    // ========== INDIVIDUAL OPERATIONS ==========
-    
-    /**
-     * Convert to lowercase
+     * Convert text to lowercase
      * @param Text - Input text
      * @return Lowercase text
      */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="To Lowercase"))
     static FString ToLowercase(const FString& Text);
     
     /**
-     * Convert to uppercase
+     * Convert text to uppercase
      * @param Text - Input text
      * @return Uppercase text
      */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="To Uppercase"))
     static FString ToUppercase(const FString& Text);
     
     /**
-     * Remove leading/trailing whitespace
+     * Trim leading and trailing whitespace
      * @param Text - Input text
      * @return Trimmed text
      */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Trim Whitespace"))
     static FString TrimWhitespace(const FString& Text);
+    
+    /**
+     * Remove all punctuation from text
+     * @param Text - Input text
+     * @return Text without punctuation
+     */
+    static FString RemovePunctuation(const FString& Text);
+    
+    /**
+     * Remove diacritical marks from text
+     * @param Text - Input text
+     * @return Text without accents
+     */
+    static FString RemoveAccents(const FString& Text);
     
     /**
      * Collapse multiple spaces to single space
      * @param Text - Input text
      * @return Text with collapsed whitespace
      */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Collapse Whitespace"))
     static FString CollapseWhitespace(const FString& Text);
     
     /**
-     * Remove accents from Latin characters (é → e)
-     * @param Text - Input text
-     * @return Text without accents
-     */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Remove Accents"))
-    static FString RemoveAccents(const FString& Text);
-    
-    /**
-     * Remove punctuation marks
-     * @param Text - Input text
-     * @param bKeepSpaces - Preserve spaces
-     * @return Text without punctuation
-     */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Remove Punctuation"))
-    static FString RemovePunctuation(const FString& Text, bool bKeepSpaces = true);
-    
-    /**
-     * Remove numeric characters
+     * Remove all numeric characters
      * @param Text - Input text
      * @return Text without numbers
      */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Remove Numbers"))
     static FString RemoveNumbers(const FString& Text);
     
     /**
-     * Remove non-alphanumeric characters
+     * Remove special characters (keep only alphanumeric and spaces)
      * @param Text - Input text
-     * @param bKeepSpaces - Preserve spaces
-     * @return Alphanumeric text only
+     * @return Text with only alphanumeric and spaces
      */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Keep Alphanumeric"))
-    static FString KeepAlphanumeric(const FString& Text, bool bKeepSpaces = true);
+    static FString RemoveSpecialCharacters(const FString& Text);
     
-    // ========== CHARACTER OPERATIONS ==========
+    // ========== TEXT ANALYSIS ==========
     
     /**
-     * Normalize a single character
-     * @param Char - Character to normalize
-     * @param Config - Normalization settings
-     * @return Normalized character(s) - may be empty or multiple chars
+     * Check if text contains only alphabetic characters
+     * @param Text - Text to check
+     * @return true if alphabetic only
      */
-    static FString NormalizeChar(TCHAR Char, const FRENormalizationConfig& Config);
+    static bool IsAlphabetic(const FString& Text);
     
     /**
-     * Remove accent from a character
-     * @param Char - Character to process
-     * @return Character without accent
+     * Check if text contains only alphanumeric characters
+     * @param Text - Text to check
+     * @return true if alphanumeric only
      */
-    static TCHAR RemoveAccentFromChar(TCHAR Char);
+    static bool IsAlphanumeric(const FString& Text);
     
     /**
-     * Check if character is accent
+     * Check if text contains only numeric characters
+     * @param Text - Text to check
+     * @return true if numeric only
+     */
+    static bool IsNumeric(const FString& Text);
+    
+    /**
+     * Check if text contains any punctuation
+     * @param Text - Text to check
+     * @return true if contains punctuation
+     */
+    static bool ContainsPunctuation(const FString& Text);
+    
+    /**
+     * Check if text contains any whitespace
+     * @param Text - Text to check
+     * @return true if contains whitespace
+     */
+    static bool ContainsWhitespace(const FString& Text);
+    
+    // ========== UNICODE HANDLING ==========
+    
+    /**
+     * Normalize Unicode representation (NFC, NFD, etc.)
+     * @param Text - Input text
+     * @param Form - Unicode normalization form
+     * @return Normalized Unicode text
+     */
+    static FString NormalizeUnicode(
+        const FString& Text,
+        EREUnicodeNormalizationForm Form = EREUnicodeNormalizationForm::NFC
+    );
+    
+    /**
+     * Convert to ASCII by removing or replacing non-ASCII characters
+     * @param Text - Input text
+     * @param ReplacementChar - Character to use for non-ASCII (empty = remove)
+     * @return ASCII-only text
+     */
+    static FString ToAscii(
+        const FString& Text,
+        const FString& ReplacementChar = TEXT("")
+    );
+    
+    // ========== CASE CONVERSION ==========
+    
+    /**
+     * Convert to title case (capitalize first letter of each word)
+     * @param Text - Input text
+     * @return Title case text
+     */
+    static FString ToTitleCase(const FString& Text);
+    
+    /**
+     * Convert to sentence case (capitalize first letter of sentences)
+     * @param Text - Input text
+     * @return Sentence case text
+     */
+    static FString ToSentenceCase(const FString& Text);
+    
+    /**
+     * Convert from camelCase/PascalCase to space-separated
+     * @param Text - Input text
+     * @return Space-separated text
+     */
+    static FString FromCamelCase(const FString& Text);
+    
+    /**
+     * Convert from snake_case to space-separated
+     * @param Text - Input text
+     * @return Space-separated text
+     */
+    static FString FromSnakeCase(const FString& Text);
+    
+    /**
+     * Convert from kebab-case to space-separated
+     * @param Text - Input text
+     * @return Space-separated text
+     */
+    static FString FromKebabCase(const FString& Text);
+    
+    // ========== UTILITY FUNCTIONS ==========
+    
+    /**
+     * Get character type classification
+     * @param Char - Character to classify
+     * @return Character type
+     */
+    static ERECharacterType GetCharacterType(TCHAR Char);
+    
+    /**
+     * Check if character is a vowel
      * @param Char - Character to check
-     * @return true if accented character
+     * @return true if vowel
      */
-    static bool IsAccentedChar(TCHAR Char);
-    
-    // ========== UTILITIES ==========
+    static bool IsVowel(TCHAR Char);
     
     /**
-     * Get default normalization config
-     * @return Default configuration
+     * Check if character is a consonant
+     * @param Char - Character to check
+     * @return true if consonant
      */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Get Default Config"))
-    static FRENormalizationConfig GetDefaultConfig();
+    static bool IsConsonant(TCHAR Char);
     
     /**
-     * Get aggressive normalization config (maximum normalization)
-     * @return Aggressive configuration
+     * Get a normalized version suitable for comparison
+     * Applies aggressive normalization for matching
+     * @param Text - Input text
+     * @return Aggressively normalized text
      */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Get Aggressive Config"))
-    static FRENormalizationConfig GetAggressiveConfig();
+    static FString GetComparisonForm(const FString& Text);
     
-    /**
-     * Get minimal normalization config (preserve most features)
-     * @return Minimal configuration
-     */
-    UFUNCTION(BlueprintPure, Category="RE|Core|Normalizer",
-              meta=(DisplayName="Get Minimal Config"))
-    static FRENormalizationConfig GetMinimalConfig();
+private:
+    // ========== DELETED CONSTRUCTORS ==========
+    
+    RENormalizer() = delete;
+    ~RENormalizer() = delete;
+    RENormalizer(const RENormalizer&) = delete;
+    RENormalizer& operator=(const RENormalizer&) = delete;
+    RENormalizer(RENormalizer&&) = delete;
+    RENormalizer& operator=(RENormalizer&&) = delete;
 };
