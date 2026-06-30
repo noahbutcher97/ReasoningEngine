@@ -1,10 +1,10 @@
 #include "Core/RECore.h"
 #include "Semantic/REFuzzy.h"
-#include "Semantic/RETokenizer.h"
+#include "Infrastructure/RETokenizer.h"
 #include "Symbolic/REPatterns.h"
 #include "Symbolic/REKnowledge.h"
 #include "Symbolic/REInferences.h"
-#include "Core/RECache.h"
+#include "Infrastructure/RECache.h"
 #include "Configuration/REEngineConfiguration.h"
 #include "ReasoningEngine.h"
 
@@ -113,17 +113,16 @@ void URECore::InitializeCoreComponents()
 {
     UE_LOG(LogReasoningEngine, Log, TEXT("Initializing core components"));
     
-    // Create all components with proper outer
-    FuzzyMatcher = NewObject<REFuzzy>(this, TEXT("FuzzyMatcher"));
-    Tokenizer = NewObject<URETokenizer>(this, TEXT("Tokenizer"));
+    // Initialize static utility components.
+    REFuzzy::Initialize();
+
+    // Create UObject components with proper outer.
     PatternEngine = NewObject<UREPatterns>(this, TEXT("PatternEngine"));
     KnowledgeBase = NewObject<UREKnowledge>(this, TEXT("KnowledgeBase"));
     InferenceEngine = NewObject<UREInferences>(this, TEXT("InferenceEngine"));
     CacheManager = NewObject<URECache>(this, TEXT("CacheManager"));
     
     // Initialize each component
-    if (FuzzyMatcher) FuzzyMatcher->Initialize();
-    if (Tokenizer) Tokenizer->Initialize();
     if (PatternEngine) PatternEngine->Initialize();
     if (KnowledgeBase) KnowledgeBase->Initialize();
     if (InferenceEngine) InferenceEngine->Initialize();
@@ -141,9 +140,6 @@ void URECore::CleanupCoreComponents()
     if (InferenceEngine) InferenceEngine->Shutdown();
     if (KnowledgeBase) KnowledgeBase->Shutdown();
     if (PatternEngine) PatternEngine->Shutdown();
-    if (Tokenizer) Tokenizer->Shutdown();
-    if (FuzzyMatcher) FuzzyMatcher->Shutdown();
-    
     // Clear processor registry
     RegisteredProcessors.Empty();
     
@@ -162,12 +158,6 @@ void URECore::ConnectComponentDependencies()
 {
     UE_LOG(LogReasoningEngine, Log, TEXT("Connecting component dependencies"));
     
-    // Tokenizer needs FuzzyMatcher for similarity calculations
-    if (Tokenizer && FuzzyMatcher)
-    {
-        Tokenizer->SetFuzzyMatcher(FuzzyMatcher);
-    }
-    
     // PatternEngine needs Tokenizer for token streams
     if (PatternEngine && Tokenizer)
     {
@@ -183,8 +173,6 @@ void URECore::ConnectComponentDependencies()
     // All components can use CacheManager
     if (CacheManager)
     {
-        if (FuzzyMatcher) FuzzyMatcher->SetCacheManager(CacheManager);
-        if (Tokenizer) Tokenizer->SetCacheManager(CacheManager);
         if (PatternEngine) PatternEngine->SetCacheManager(CacheManager);
     }
     
@@ -195,20 +183,12 @@ void URECore::ConnectComponentDependencies()
 
 REFuzzy* URECore::GetFuzzyMatcher()
 {
-    if (!FuzzyMatcher)
-    {
-        UE_LOG(LogReasoningEngine, Warning, TEXT("Fuzzy matcher not initialized"));
-    }
     TrackOperation(TEXT("GetFuzzyMatcher"));
     return FuzzyMatcher;
 }
 
-URETokenizer* URECore::GetTokenizer()
+RETokenizer* URECore::GetTokenizer()
 {
-    if (!Tokenizer)
-    {
-        UE_LOG(LogReasoningEngine, Warning, TEXT("Tokenizer not initialized"));
-    }
     TrackOperation(TEXT("GetTokenizer"));
     return Tokenizer;
 }
@@ -336,17 +316,6 @@ void URECore::LoadConfiguration(UREEngineConfiguration* Config)
     
     Configuration = Config;
     
-    // Apply component configurations - fixed to use address-of operator
-    if (FuzzyMatcher)
-    {
-        FuzzyMatcher->ApplyConfiguration(&Config->FuzzyMatcherConfig);  // Pass address
-    }
-    
-    if (Tokenizer)
-    {
-        // Tokenizer->ApplyConfiguration(&Config->TokenizerConfig);  // When implemented
-    }
-    
     if (CacheManager)
     {
         CacheManager->SetMaxSizeMB(Config->CacheManagerConfig.MaxMemoryMB);
@@ -406,11 +375,6 @@ void URECore::ConfigureRuntime(int32 MaxCacheSizeMB, bool bEnableMultithreading,
         CacheManager->SetMaxSizeMB(MaxCacheSizeMB);
     }
     
-    if (FuzzyMatcher)
-    {
-        FuzzyMatcher->SetMultithreading(bEnableMultithreading, ThreadPoolSize);
-    }
-    
     UE_LOG(LogReasoningEngine, Log, TEXT("Runtime configured - Cache: %dMB, Threading: %s, Threads: %d"),
         MaxCacheSizeMB, bEnableMultithreading ? TEXT("Yes") : TEXT("No"), ThreadPoolSize);
     
@@ -442,8 +406,8 @@ FString URECore::GetPerformanceStats() const
         
         // Component status
         Stats += TEXT("\n--- Component Status ---\n");
-        Stats += FString::Printf(TEXT("Fuzzy Matcher: %s\n"), FuzzyMatcher ? TEXT("Active") : TEXT("Inactive"));
-        Stats += FString::Printf(TEXT("Tokenizer: %s\n"), Tokenizer ? TEXT("Active") : TEXT("Inactive"));
+        Stats += TEXT("Fuzzy Matcher: Static\n");
+        Stats += TEXT("Tokenizer: Static\n");
         Stats += FString::Printf(TEXT("Pattern Engine: %s\n"), PatternEngine ? TEXT("Active") : TEXT("Inactive"));
         Stats += FString::Printf(TEXT("Knowledge Base: %s\n"), KnowledgeBase ? TEXT("Active") : TEXT("Inactive"));
         Stats += FString::Printf(TEXT("Inference Engine: %s\n"), InferenceEngine ? TEXT("Active") : TEXT("Inactive"));
@@ -476,8 +440,6 @@ void URECore::ClearAllCaches()
     }
     
     // Also clear component-specific caches
-    if (FuzzyMatcher) FuzzyMatcher->ClearCache();
-    if (Tokenizer) Tokenizer->ClearCache();
     if (PatternEngine) PatternEngine->ClearCache();
     
     UE_LOG(LogReasoningEngine, Log, TEXT("All caches cleared"));
@@ -492,8 +454,6 @@ int64 URECore::GetMemoryUsage() const
     TotalMemory += GetClass()->GetStructureSize();
     
     // Component memory
-    if (FuzzyMatcher) TotalMemory += FuzzyMatcher->GetMemoryUsage();
-    if (Tokenizer) TotalMemory += Tokenizer->GetMemoryUsage();
     if (PatternEngine) TotalMemory += PatternEngine->GetMemoryUsage();
     if (KnowledgeBase) TotalMemory += KnowledgeBase->GetMemoryUsage();
     if (InferenceEngine) TotalMemory += InferenceEngine->GetMemoryUsage();
@@ -510,15 +470,9 @@ bool URECore::PerformSelfCheck() const
     bool bAllOK = true;
     
     // Check each component
-    if (!FuzzyMatcher || !FuzzyMatcher->IsOperational())
+    if (!REFuzzy::IsReady())
     {
         UE_LOG(LogReasoningEngine, Warning, TEXT("Self-check: Fuzzy Matcher not operational"));
-        bAllOK = false;
-    }
-    
-    if (!Tokenizer || !Tokenizer->IsOperational())
-    {
-        UE_LOG(LogReasoningEngine, Warning, TEXT("Self-check: Tokenizer not operational"));
         bAllOK = false;
     }
     

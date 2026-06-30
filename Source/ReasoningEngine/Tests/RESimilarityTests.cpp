@@ -16,8 +16,7 @@ bool FRESimilarityHarnessTest::RunTest(const FString& Parameters)
 	{
 		ERESimilarityMetric Metric = static_cast<ERESimilarityMetric>(MetricIndex);
 
-		// Dispatcher call (currently a stub in URESimilarity)
-		FRESimilarityResult Result = URESimilarity::CompareStringsWithAlgo(A, B, Metric, true);
+		FRESimilarityResult Result = RESimilarity::CompareStringsWithAlgo(A, B, Metric, true);
 
 		FString MetricName = StaticEnum<ERESimilarityMetric>()->GetNameStringByValue(MetricIndex);
 

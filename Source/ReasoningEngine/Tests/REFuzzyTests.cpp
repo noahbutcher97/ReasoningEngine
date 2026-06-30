@@ -1,6 +1,6 @@
 ﻿#include "Misc/AutomationTest.h"
 #include "Semantic/REFuzzy.h"
-#include "Semantic/Data/REStringTypes.h"
+#include "Semantic/Data/RESemanticTypes.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FREFuzzyHarnessTest,
 	"ReasoningEngine.Fuzzy.Harness",

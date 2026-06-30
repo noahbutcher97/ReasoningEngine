@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Infrastructure/Data/REInfrastructureTypes.h"
 #include "RESymbolicTypes.generated.h"
 
 /**
@@ -37,27 +38,6 @@ enum class EREPatternType : uint8
     Regex           UMETA(DisplayName = "Regular Expression"),
     StateMachine    UMETA(DisplayName = "State Machine"),
     Graph           UMETA(DisplayName = "Graph Pattern")
-};
-
-/**
- * Token type enumeration
- */
-UENUM(BlueprintType)
-enum class ERETokenType : uint8
-{
-    Unknown         UMETA(DisplayName = "Unknown"),
-    Word            UMETA(DisplayName = "Word"),
-    Number          UMETA(DisplayName = "Number"),
-    Symbol          UMETA(DisplayName = "Symbol"),
-    Delimiter       UMETA(DisplayName = "Delimiter"),
-    Operator        UMETA(DisplayName = "Operator"),
-    Keyword         UMETA(DisplayName = "Keyword"),
-    Whitespace      UMETA(DisplayName = "Whitespace"),
-    Punctuation     UMETA(DisplayName = "Punctuation"),
-    CamelCase       UMETA(DisplayName = "CamelCase"),
-    SnakeCase       UMETA(DisplayName = "SnakeCase"),
-    Identifier      UMETA(DisplayName = "Identifier"),
-    Literal         UMETA(DisplayName = "Literal")
 };
 
 /**

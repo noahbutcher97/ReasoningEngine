@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
 #include "Semantic/Data/RESemanticTypes.h"
+#include "Infrastructure/Data/REInfrastructureTypes.h"
 #include "REProcessor.generated.h"
 
 // Forward declarations

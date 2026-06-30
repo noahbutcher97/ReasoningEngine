@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Semantic/Data/RESemanticTypes.h"
-#include "UREFuzzyBlueprintLibrary.generated.h"
+#include "REFuzzyBlueprintLibrary.generated.h"
 
 UCLASS()
 class REASONINGENGINE_API UREFuzzyBlueprintLibrary : public UBlueprintFunctionLibrary
