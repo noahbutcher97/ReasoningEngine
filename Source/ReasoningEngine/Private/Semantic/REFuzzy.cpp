@@ -106,7 +106,7 @@ FString REFuzzy::PrepareString(const FString& Input, bool bNormalize)
 {
     if (bNormalize)
     {
-        return URENormalizer::Normalize(Input);
+        return RENormalizer::NormalizeText(Input);
     }
     return Input;
 }

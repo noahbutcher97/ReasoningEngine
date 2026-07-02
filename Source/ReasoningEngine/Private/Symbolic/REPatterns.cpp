@@ -6,7 +6,7 @@ uint32 UREPatterns::GetCacheKey(const FString& Text, FName PatternID)
 }
 
 FREPatternMatch UREPatterns::ExecuteStateMachine(const FREPatternStateMachine& Machine,
-	const FTokenStream& Tokens) const
+	const FRETokenStream& Tokens) const
 {
 	return FREPatternMatch();
 }
@@ -29,8 +29,9 @@ void UREPatterns::Shutdown()
 {
 }
 
-void UREPatterns::SetTokenizer(URETokenizer* InTokenizer)
+void UREPatterns::SetTokenizer(RETokenizer* InTokenizer)
 {
+    Tokenizer = InTokenizer;
 }
 
 void UREPatterns::SetCacheManager(URECache* InCacheManager)

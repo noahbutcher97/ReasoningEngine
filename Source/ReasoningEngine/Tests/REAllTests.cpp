@@ -1,7 +1,6 @@
 ﻿#include "Misc/AutomationTest.h"
 #include "Semantic/REFuzzy.h"
 #include "Semantic/RESimilarity.h"
-#include "Semantic/Data/REStringTypes.h"
 #include "Semantic/Data/RESemanticTypes.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRESemanticAllHarnessTest,
@@ -48,7 +47,7 @@ bool FRESemanticAllHarnessTest::RunTest(const FString& Parameters)
     {
         ERESimilarityMetric Metric = static_cast<ERESimilarityMetric>(MetricIndex);
 
-        FRESimilarityResult Result = URESimilarity::CompareStringsWithAlgo(A, B, Metric, true);
+        FRESimilarityResult Result = RESimilarity::CompareStringsWithAlgo(A, B, Metric, true);
 
         FString MetricName = StaticEnum<ERESimilarityMetric>()->GetNameStringByValue(MetricIndex);
         UE_LOG(LogTemp, Display,

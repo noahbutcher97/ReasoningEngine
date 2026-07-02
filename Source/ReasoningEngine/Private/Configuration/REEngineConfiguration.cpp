@@ -1,11 +1,11 @@
 #include "Configuration/REEngineConfiguration.h"
 #include "Core/RECore.h"
 #include "Semantic/REFuzzy.h"
-#include "Semantic/RETokenizer.h"
+#include "Infrastructure/RETokenizer.h"
 #include "Symbolic/REPatterns.h"
 #include "Symbolic/REKnowledge.h"
 #include "Symbolic/REInferences.h"
-#include "Core/RECache.h"
+#include "Infrastructure/RECache.h"
 #include "Interfaces/REProcessor.h"
 #include "ReasoningEngine.h"
 
@@ -82,20 +82,6 @@ void UREEngineConfiguration::ApplyToEngine(URECore* Engine) const
     {
         UE_LOG(LogReasoningEngine, Warning, TEXT("Cannot apply configuration to null engine"));
         return;
-    }
-    
-    // Apply component configurations
-    if (REFuzzy* FuzzyMatcher = Engine->GetFuzzyMatcher())
-    {
-        // Apply fuzzy matcher config
-        FuzzyMatcher->SetMultithreading(FuzzyMatcherConfig.bUseMultithreading, 
-                                       FuzzyMatcherConfig.ThreadPoolSize);
-    }
-    
-    if (URETokenizer* Tokenizer = Engine->GetTokenizer())
-    {
-        // Apply tokenizer config
-        // Tokenizer->ApplyConfiguration(TokenizerConfig);
     }
     
     if (URECache* CacheManager = Engine->GetCacheManager())

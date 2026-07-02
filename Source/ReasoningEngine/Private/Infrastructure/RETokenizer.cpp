@@ -484,7 +484,7 @@ ERETokenType RETokenizer::ClassifyTokenType(const FString& Text)
     {
         return ERETokenType::Whitespace;
     }
-    else if (Text.Len() == 1 && FChar::IsPunctuation(Text[0]))
+    else if (Text.Len() == 1 && FChar::IsPunct(Text[0]))
     {
         return ERETokenType::Punctuation;
     }

@@ -123,7 +123,7 @@ FString RENormalizer::RemovePunctuation(const FString& Text)
     
     for (TCHAR Char : Text)
     {
-        if (!FChar::IsPunctuation(Char))
+        if (!FChar::IsPunct(Char))
         {
             Result.AppendChar(Char);
         }
@@ -280,7 +280,7 @@ bool RENormalizer::ContainsPunctuation(const FString& Text)
 {
     for (TCHAR Char : Text)
     {
-        if (FChar::IsPunctuation(Char))
+        if (FChar::IsPunct(Char))
         {
             return true;
         }
@@ -452,7 +452,7 @@ ERECharacterType RENormalizer::GetCharacterType(TCHAR Char)
     {
         return ERECharacterType::Whitespace;
     }
-    else if (FChar::IsPunctuation(Char))
+    else if (FChar::IsPunct(Char))
     {
         return ERECharacterType::Punctuation;
     }

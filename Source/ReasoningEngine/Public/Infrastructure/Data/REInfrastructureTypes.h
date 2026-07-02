@@ -706,11 +706,6 @@ struct FREVocabularyCollection
 };
 
 /**
- * Token stream type alias (for compatibility)
- */
-using FTokenStream = FRETokenStream;
-
-/**
  * Token type enum alias (for compatibility)
  */
 using ETokenType = ERETokenType;

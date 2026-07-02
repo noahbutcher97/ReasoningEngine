@@ -6,7 +6,7 @@
 #include "REPatterns.generated.h"
 
 // Forward declarations
-class URETokenizer;
+class RETokenizer;
 class URECache;
 
 /**
@@ -21,8 +21,7 @@ class REASONINGENGINE_API UREPatterns : public UObject
 private:
     // ========== DEPENDENCIES ==========
     
-    UPROPERTY()
-    URETokenizer* Tokenizer;
+    RETokenizer* Tokenizer = nullptr;
     
     UPROPERTY()
     URECache* CacheManager;
@@ -61,7 +60,7 @@ private:
     
     /** Execute state machine */
     FREPatternMatch ExecuteStateMachine(const FREPatternStateMachine& Machine,
-                                        const FTokenStream& Tokens) const;
+                                        const FRETokenStream& Tokens) const;
     
     /** Match with regex */
     FREPatternMatch MatchRegex(const FString& Pattern,
@@ -80,7 +79,7 @@ public:
     
     // ========== DEPENDENCIES ==========
     
-    void SetTokenizer(URETokenizer* InTokenizer);
+    void SetTokenizer(RETokenizer* InTokenizer);
     void SetCacheManager(URECache* InCacheManager);
     
     // ========== PATTERN REGISTRATION ==========

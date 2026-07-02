@@ -8,7 +8,7 @@
 
 // Forward declarations
 class REFuzzy;
-class URETokenizer;
+class RETokenizer;
 class UREPatterns;
 class UREKnowledge;
 class UREInferences;
@@ -38,11 +38,9 @@ private:
     
     // ========== CORE COMPONENTS ==========
     
-    UPROPERTY()
-    REFuzzy* FuzzyMatcher;
+    REFuzzy* FuzzyMatcher = nullptr;
     
-    UPROPERTY()
-    URETokenizer* Tokenizer;
+    RETokenizer* Tokenizer = nullptr;
     
     UPROPERTY()
     UREPatterns* PatternEngine;
@@ -124,17 +122,13 @@ public:
      * Get the fuzzy matching component
      * @return Fuzzy matcher for string operations
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Semantic|Components",
-              meta=(DisplayName="Get Fuzzy Matcher"))
     REFuzzy* GetFuzzyMatcher();
     
     /**
      * Get the tokenizer component
      * @return Tokenizer for text processing
      */
-    UFUNCTION(BlueprintCallable, Category="MM|Semantic|Components",
-              meta=(DisplayName="Get Tokenizer"))
-    URETokenizer* GetTokenizer();
+    RETokenizer* GetTokenizer();
     
     /**
      * Get the pattern engine component
