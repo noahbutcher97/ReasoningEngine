@@ -81,23 +81,30 @@ void URECore::DestroySingleton()
     
     bIsShuttingDown = true;
     
-    if (Instance)
+    // During engine exit the UObject system tears down every object, rooted ones included,
+    // before module shutdown runs. Instance is a raw static pointer, so it can dangle by now and
+    // touching it (e.g. locking its already-destroyed StatsMutex) is an access violation.
+    // The engine is releasing the object itself in that case, so only clean up when it is still live.
+    const bool bObjectSystemLive = UObjectInitialized() && !IsEngineExitRequested();
+
+    if (Instance && bObjectSystemLive)
     {
         // Log final stats
         UE_LOG(LogReasoningEngine, Log, TEXT("%s"), *Instance->GetPerformanceStats());
-        
+
         // Cleanup components
         Instance->CleanupCoreComponents();
-        
+
         // Remove from root and allow GC
         Instance->RemoveFromRoot();
-        
+
         // Force immediate cleanup
         Instance->ConditionalBeginDestroy();
-        
-        Instance = nullptr;
     }
-    
+
+    // Always drop the reference, including when the object was already destroyed by the engine.
+    Instance = nullptr;
+
     bIsShuttingDown = false;
     
     UE_LOG(LogReasoningEngine, Log, TEXT("Singleton shutdown complete"));
